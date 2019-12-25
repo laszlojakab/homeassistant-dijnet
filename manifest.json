@@ -1,0 +1,15 @@
+{
+  "domain": "dijnet",
+  "name": "Dijnet",
+  "documentation": "",
+  "dependencies": [],
+  "config_flow": false,
+  "codeowners": [
+    "@laszlojakab"
+  ],
+  "homeassistant": "0.98.0",
+  "requirements": [
+    "requests",
+    "PyQuery"
+  ]
+}
