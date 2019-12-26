@@ -8,10 +8,3 @@ sensor:
     username: !secret dijnet_username
     password: !secret dijnet_password
 ```
-
-```yaml
-binary_sensor:
-  - platform: dijnet
-    username: !secret dijnet_username
-    password: !secret dijnet_password
-```
