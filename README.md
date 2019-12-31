@@ -7,4 +7,5 @@ sensor:
   - platform: dijnet
     username: !secret dijnet_username
     password: !secret dijnet_password
+    #download_dir: 'dijnet' #optional directory to download invoices
 ```
