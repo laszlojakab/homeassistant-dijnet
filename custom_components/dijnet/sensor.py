@@ -142,10 +142,10 @@ class DijnetWrapper:
                     invoiceNo = row.children("td:nth-child(3)").text()
                     issuanceDate = row.children("td:nth-child(4)").text()
                     invoiceAmount = float(
-                        re.sub(r"[\sA-Za-z]+", "", row.children("td:nth-child(5)").text()))
+                        re.sub(r"[^0-9]+", "", row.children("td:nth-child(5)").text()))
                     deadline = row.children("td:nth-child(6)").text()
                     amount = float(
-                        re.sub(r"[\sA-Za-z]+", "", row.children("td:nth-child(7)").text()))
+                        re.sub(r"[^0-9]+", "", row.children("td:nth-child(7)").text()))
 
                     _LOGGER.debug("Unpaid invoice found. %s, %s, %s, %s, %f, %s, %f", provider,
                                   issuerId, invoiceNo, issuanceDate, invoiceAmount, deadline, amount)
@@ -163,8 +163,10 @@ class DijnetWrapper:
 
                     unpaidInvoices.append(unpaidInvoice)
 
-                    unpaidInvoicePageUrl = "https://www.dijnet.hu" + \
-                        row.find("td:nth-child(8) a").attr("href")
+                    cell = row.find("td[onclick^=xt_cell_click]")
+                    unpaidInvoiceRelativeUrl = re.search(
+                        r"xt_cell_click\(this,'([a-zA-Z/\?_&=0-9\|]+)", cell.attr("onclick")).group(1)
+                    unpaidInvoicePageUrl = f"https://www.dijnet.hu{unpaidInvoiceRelativeUrl}"
                     _LOGGER.debug("Loading invoice page (%s)",
                                   unpaidInvoicePageUrl)
 
@@ -178,8 +180,9 @@ class DijnetWrapper:
                     unpaidInvoiceDownloadPageResponsePq = pq(
                         unpaidInvoiceDownloadPageResponse.text)
 
-                    if (self._downloadDir != ""):                        
-                        Path(self._downloadDir).mkdir(parents=True, exist_ok=True)
+                    if (self._downloadDir != ""):
+                        Path(self._downloadDir).mkdir(
+                            parents=True, exist_ok=True)
 
                         for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a[href^=szamla]").items():
                             href = downloadableLink.attr("href")
