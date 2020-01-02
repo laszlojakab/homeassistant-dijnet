@@ -63,7 +63,6 @@ class DijnetWrapper:
         self._unpaidInvoices = None
         self._unpaidInvoicesLastUpdate = None
         self._providers = None
-        self._files = {}
 
     def getUnpaidInvoices(self):
         if (self._unpaidInvoices == None):
@@ -157,8 +156,7 @@ class DijnetWrapper:
                         'issuanceDate': issuanceDate,
                         'invoiceAmount': invoiceAmount,
                         'deadline': deadline,
-                        'amount': amount,
-                        'files': []
+                        'amount': amount
                     }
 
                     unpaidInvoices.append(unpaidInvoice)
@@ -202,7 +200,6 @@ class DijnetWrapper:
                                 with open(fileName, "wb") as fil:
                                     for chunk in fileDownloadRequest.iter_content(1024):
                                         fil.write(chunk)
-                                self._files[fileName] = None
 
                 self._unpaidInvoices = unpaidInvoices
         return
@@ -228,6 +225,7 @@ class DijnetBaseSensor(Entity):
         self._state = None
         self._wrapper = wrapper
         self._attributes = {}
+        self._data = {}
 
     @property
     def is_on(self):
@@ -267,7 +265,7 @@ class DijnetBaseSensor(Entity):
         self._wrapper.updateUnpaidInvoices()
         _LOGGER.debug(
             "Updating wrapper for dijnet sensor (%s) completed.", self.name)
-        self._attributes = {
+        self._data = {
             'providers': self._wrapper.getProviders(),
             'unpaidInvoices': self._wrapper.getUnpaidInvoices()
         }
@@ -301,9 +299,13 @@ class DijnetProviderSensor(DijnetBaseSensor):
         super().update()
         self._state = None
         amount = 0
-        for unpaidInvoice in self._attributes['unpaidInvoices']:
+        unpaidInvoices = []
+        for unpaidInvoice in self._data['unpaidInvoices']:
             if (unpaidInvoice['issuerId'] == self._provider):
                 amount = amount + unpaidInvoice['amount']
+                unpaidInvoices.append(unpaidInvoice)
+
+        self._attributes = { 'unpaidInvoices': unpaidInvoices }
         self._state = amount
 
 
@@ -317,6 +319,6 @@ class DijnetTotalSensor(DijnetBaseSensor):
     def update(self):
         super().update()
         amount = 0
-        for unpaidInvoice in self._attributes['unpaidInvoices']:
+        for unpaidInvoice in self._data['unpaidInvoices']:
             amount = amount + unpaidInvoice['amount']
         self._state = amount
