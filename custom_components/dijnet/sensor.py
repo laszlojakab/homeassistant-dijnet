@@ -182,10 +182,11 @@ class DijnetWrapper:
                         Path(self._downloadDir).mkdir(
                             parents=True, exist_ok=True)
 
-                        for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a[href^=szamla]").items():
+                        for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a:not([href^=http])").items():
                             href = downloadableLink.attr("href")
-                            extension = href.replace("szamla_", "")[:3]
-                            fileName = f"{self._downloadDir}/szamla_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}"
+                            extension = href.split("?")[0].split("_")[-1]
+                            name = href.split("?")[0][:-4]
+                            fileName = f"{self._downloadDir}/{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}"
                             downloadUrl = f"https://www.dijnet.hu/ekonto/control/{href}"
                             _LOGGER.debug(
                                 "Downloadable file found (%s).", downloadUrl)
