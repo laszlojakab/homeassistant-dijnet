@@ -186,19 +186,21 @@ class DijnetWrapper:
                             href = downloadableLink.attr("href")
                             extension = href.split("?")[0].split("_")[-1]
                             name = href.split("?")[0][:-4]
-                            fileName = f"{self._downloadDir}/{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}"
+                            fileName = f"{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}".replace("/", "_").replace("\\", "_")
                             downloadUrl = f"https://www.dijnet.hu/ekonto/control/{href}"
                             _LOGGER.debug(
                                 "Downloadable file found (%s).", downloadUrl)
 
-                            if os.path.exists(fileName):
+                            fullPath = f"{self._downloadDir}/{fileName}"
+
+                            if os.path.exists(fullPath):
                                 _LOGGER.debug(
-                                    "File already downloaded (%s)", fileName)
+                                    "File already downloaded (%s)", fullPath)
                             else:
                                 _LOGGER.debug(
-                                    "Downloading file (%s -> %s).", downloadUrl, fileName)
+                                    "Downloading file (%s -> %s).", downloadUrl, fullPath)
                                 fileDownloadRequest = session.get(downloadUrl)
-                                with open(fileName, "wb") as fil:
+                                with open(fullPath, "wb") as fil:
                                     for chunk in fileDownloadRequest.iter_content(1024):
                                         fil.write(chunk)
 
