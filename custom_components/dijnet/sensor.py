@@ -135,6 +135,7 @@ class DijnetWrapper:
                 _LOGGER.debug("Parsing 'main' website.")
                 unpaidInvoicesPq = pq(unpaidInvoicesPageResponse.text)
                 unpaidInvoices = []
+                index = 0
                 for row in unpaidInvoicesPq.find(".szamla_table > tbody > tr").items():
                     provider = row.children("td:nth-child(1)").text()
                     issuerId = row.children("td:nth-child(2)").text()
@@ -161,10 +162,7 @@ class DijnetWrapper:
 
                     unpaidInvoices.append(unpaidInvoice)
 
-                    cell = row.find("td[onclick^=xt_cell_click]")
-                    unpaidInvoiceRelativeUrl = re.search(
-                        r"xt_cell_click\(this,'([a-zA-Z/\?_&=0-9\|]+)", cell.attr("onclick")).group(1)
-                    unpaidInvoicePageUrl = f"https://www.dijnet.hu{unpaidInvoiceRelativeUrl}"
+                    unpaidInvoicePageUrl = f"https://www.dijnet.hu/ekonto/control/szamla_select?vfw_coll=szamla_list&vfw_rowid={index}&exp=K"
                     _LOGGER.debug("Loading invoice page (%s)",
                                   unpaidInvoicePageUrl)
 
@@ -204,6 +202,7 @@ class DijnetWrapper:
                                     for chunk in fileDownloadRequest.iter_content(1024):
                                         fil.write(chunk)
 
+                    index = index + 1
                 self._unpaidInvoices = unpaidInvoices
         return
 
