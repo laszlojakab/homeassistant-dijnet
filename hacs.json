@@ -1,4 +1,5 @@
 {
     "name": "Dijnet integration",
-    "country": "HU"
+    "country": "HU",
+    "render_readme": true
   }
