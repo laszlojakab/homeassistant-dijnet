@@ -1,5 +1,6 @@
 {
     "name": "Dijnet integration",
     "country": "HU",
-    "render_readme": "True"
+    "render_readme": "True",
+    "iot_class": "Cloud Polling"
 }
