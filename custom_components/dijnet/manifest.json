@@ -7,7 +7,6 @@
   "codeowners": [
     "@laszlojakab"
   ],
-  "homeassistant": "0.98.0",
   "requirements": [
     "requests",
     "PyQuery"
