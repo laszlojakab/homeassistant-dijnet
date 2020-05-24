@@ -1,6 +1,5 @@
 {
     "name": "Dijnet integration",
     "country": "HU",
-    "render_readme": true,
-    "homeassistant": "0.110.0"
+    "render_readme": "True"
 }
