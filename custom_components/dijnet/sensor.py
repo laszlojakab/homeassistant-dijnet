@@ -36,7 +36,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Dijnet sensor."""
     username = config[CONF_USERNAME]
     password = config[CONF_PASSWORD]
@@ -46,12 +46,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     _LOGGER.debug("Setting up platform.")
 
     for provider in wrapper.getProviders():
-        async_add_entities(
+        add_entities(
             [DijnetProviderSensor(provider, wrapper)])
         _LOGGER.debug("Sensor added (%s)", provider)
 
     _LOGGER.debug("Adding total sensor")
-    async_add_entities([DijnetTotalSensor(wrapper)], True)
+    add_entities([DijnetTotalSensor(wrapper)], True)
 
 
 class DijnetWrapper:
