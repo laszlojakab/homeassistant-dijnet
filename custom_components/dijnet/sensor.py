@@ -289,6 +289,7 @@ class DijnetProviderSensor(DijnetBaseSensor):
         """Initialize the Dijnet provider sensor."""
         super().__init__(wrapper)
         self._provider = provider
+        self.update()
 
     @property
     def name(self):
