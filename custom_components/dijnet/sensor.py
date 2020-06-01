@@ -78,9 +78,7 @@ class DijnetWrapper:
         if (self._unpaidInvoicesLastUpdate == None):
             return False
 
-        ageInMinutes = self.getUnpaidInvoicesAge().seconds / 60.0
-
-        return (ageInMinutes < 1)  # less than a minute
+        return self.getUnpaidInvoicesAge() < SCAN_INTERVAL
 
     def getUnpaidInvoicesAge(self):
         if (self._unpaidInvoicesLastUpdate == None):
