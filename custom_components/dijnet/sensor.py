@@ -140,10 +140,10 @@ class DijnetWrapper:
                     invoiceNo = row.children("td:nth-child(3)").text()
                     issuanceDate = row.children("td:nth-child(4)").text()
                     invoiceAmount = float(
-                        re.sub(r"[^0-9]+", "", row.children("td:nth-child(5)").text()))
+                        re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(5)").text()))
                     deadline = row.children("td:nth-child(6)").text()
                     amount = float(
-                        re.sub(r"[^0-9]+", "", row.children("td:nth-child(7)").text()))
+                        re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
 
                     _LOGGER.debug("Unpaid invoice found. %s, %s, %s, %s, %f, %s, %f", provider,
                                   issuerId, invoiceNo, issuanceDate, invoiceAmount, deadline, amount)
