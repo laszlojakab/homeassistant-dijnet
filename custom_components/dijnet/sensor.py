@@ -248,8 +248,8 @@ class DijnetBaseSensor(Entity):
         return UNIT
 
     @property
-    def device_state_attributes(self):
-        """Return device specific state attributes."""
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
         return self._attributes
 
     @property
