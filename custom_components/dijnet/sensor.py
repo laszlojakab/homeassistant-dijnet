@@ -1,24 +1,24 @@
 """Support for Dijnet."""
-import json
 import logging
-import re
-from datetime import timedelta, datetime
-
-from pathlib import Path
 import os.path
-from os import path
-import homeassistant.helpers.config_validation as cv
-import requests
+import re
 import threading
-import voluptuous as vol
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import (CONF_DEVICE_CLASS, CONF_NAME, CONF_PASSWORD,
-                                 CONF_USERNAME)
-from homeassistant.helpers.entity import Entity
+from datetime import datetime, timedelta
+from pathlib import Path
 
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from custom_components.dijnet.dijnet_session import DijnetSession
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import (ConfigType, DiscoveryInfoType,
+                                          HomeAssistantType)
+from homeassistant.util import Throttle
 from pyquery import PyQuery as pq
 
-SCAN_INTERVAL = timedelta(hours=3)
+MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 ICON = "mdi:currency-usd"
 UNIT = "Ft"
 _LOGGER = logging.getLogger(__name__)
@@ -36,7 +36,13 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(
+    hass: HomeAssistantType,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType = None,
+) -> None:
+
     """Set up the Dijnet sensor."""
     username = config[CONF_USERNAME]
     password = config[CONF_PASSWORD]
@@ -45,7 +51,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Setting up platform.")
 
-    for provider in wrapper.getProviders():
+    for provider in (await wrapper.getProviders()):
         add_entities(
             [DijnetProviderSensor(provider, wrapper)])
         _LOGGER.debug("Sensor added (%s)", provider)
@@ -64,21 +70,21 @@ class DijnetWrapper:
         self._unpaidInvoicesLastUpdate = None
         self._providers = None
 
-    def getUnpaidInvoices(self):
+    async def getUnpaidInvoices(self):
         if (self._unpaidInvoices == None):
-            self.updateUnpaidInvoices()
+            await self.updateUnpaidInvoices()
         return self._unpaidInvoices
 
-    def getProviders(self):
+    async def getProviders(self):
         if (self._providers == None):
-            self.updateProviders()
+            await self.updateProviders()
         return self._providers
 
     def isUnpaidInvoicesUpdatedNotLongAgo(self):
         if (self._unpaidInvoicesLastUpdate == None):
             return False
 
-        return self.getUnpaidInvoicesAge() < SCAN_INTERVAL
+        return self.getUnpaidInvoicesAge() < MIN_TIME_BETWEEN_UPDATES
 
     def getUnpaidInvoicesAge(self):
         if (self._unpaidInvoicesLastUpdate == None):
@@ -86,34 +92,34 @@ class DijnetWrapper:
 
         return (datetime.now() - self._unpaidInvoicesLastUpdate)
 
-    def updateProviders(self):
+    async def updateProviders(self):
         self._providers = []
 
         _LOGGER.debug("Updating providers.")
-        session = requests.Session()
-        if (self.login(session) == False):
-            return
 
-        _LOGGER.debug("Loading main website.")
-        session.get("https://www.dijnet.hu/ekonto/control/main")
+        async with DijnetSession() as session:
+            await session.get_root_page()
 
-        _LOGGER.debug("Loading 'regszolg_new' website.")
-        session.get("https://www.dijnet.hu/ekonto/control/regszolg_new")
+            if not await session.post_login(self._username, self._password):
+                return
 
-        _LOGGER.debug("Loading 'regszolg_list' website.")
-        providersResponse = session.get(
-            "https://www.dijnet.hu/ekonto/control/regszolg_list")
+            _LOGGER.debug("Loading main page.")
+            await session.get_main_page()
 
-        _LOGGER.debug("Parsing 'regszolg_list' website.")
-        providersResponsePq = pq(providersResponse.text)
-        for row in providersResponsePq.find(".szamla_table > tbody > tr").items():
-            providerName = row.children("td:nth-child(3)").text()
-            _LOGGER.debug("Provider found (%s)", providerName)
-            self._providers.append(providerName)
+            _LOGGER.debug("Loading 'regszolg_new' page.")
+            await session.get_new_providers_page()
 
-        return
+            _LOGGER.debug("Loading 'regszolg_list' page.")
+            providersResponse = await session.get_registered_providers_page()
 
-    def updateUnpaidInvoices(self):
+            _LOGGER.debug("Parsing 'regszolg_list' page.")
+            providersResponsePq = pq(providersResponse)
+            for row in providersResponsePq.find(".szamla_table > tbody > tr").items():
+                providerName = row.children("td:nth-child(3)").text()
+                _LOGGER.debug("Provider found (%s)", providerName)
+                self._providers.append(providerName)
+
+    async def updateUnpaidInvoices(self):
         with self._lock:
             if (self.isUnpaidInvoicesUpdatedNotLongAgo()):
                 _LOGGER.debug("Skipping unpaid invoices update. Data updated recently (%i seconds ago)",
@@ -122,102 +128,85 @@ class DijnetWrapper:
             else:
                 _LOGGER.debug("Updating unpaid invoices.")
                 self._unpaidInvoicesLastUpdate = datetime.now()
-                session = requests.Session()
-                if (self.login(session) == False):
-                    return
+                async with DijnetSession() as session:
+                    await session.get_root_page()
 
-                _LOGGER.debug("Loading 'main' website.")
-                unpaidInvoicesPageResponse = session.get(
-                    "https://www.dijnet.hu/ekonto/control/main")
+                    if not (await session.post_login(self._username, self._password)):
+                        return
 
-                _LOGGER.debug("Parsing 'main' website.")
-                unpaidInvoicesPq = pq(unpaidInvoicesPageResponse.text)
-                unpaidInvoices = []
-                index = 0
-                for row in unpaidInvoicesPq.find(".szamla_table > tbody > tr").items():
-                    provider = row.children("td:nth-child(1)").text()
-                    issuerId = row.children("td:nth-child(2)").text()
-                    invoiceNo = row.children("td:nth-child(3)").text()
-                    issuanceDate = row.children("td:nth-child(4)").text()
-                    invoiceAmount = float(
-                        re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(5)").text()))
-                    deadline = row.children("td:nth-child(6)").text()
-                    amount = float(
-                        re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
+                    _LOGGER.debug("Loading 'main' website.")
+                    unpaidInvoicesPageResponse = await session.get_main_page()
 
-                    _LOGGER.debug("Unpaid invoice found. %s, %s, %s, %s, %f, %s, %f", provider,
-                                  issuerId, invoiceNo, issuanceDate, invoiceAmount, deadline, amount)
+                    _LOGGER.debug("Parsing 'main' website.")
+                    unpaidInvoicesPq = pq(unpaidInvoicesPageResponse)
+                    unpaidInvoices = []
+                    index = 0
+                    for row in unpaidInvoicesPq.find(".szamla_table > tbody > tr").items():
+                        provider = row.children("td:nth-child(1)").text()
+                        issuerId = row.children("td:nth-child(2)").text()
+                        invoiceNo = row.children("td:nth-child(3)").text()
+                        issuanceDate = row.children("td:nth-child(4)").text()
+                        invoiceAmount = float(
+                            re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(5)").text()))
+                        deadline = row.children("td:nth-child(6)").text()
+                        amount = float(
+                            re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
 
-                    unpaidInvoice = {
-                        'provider': provider,
-                        'issuerId': issuerId,
-                        'invoiceNo': invoiceNo,
-                        'issuanceDate': issuanceDate,
-                        'invoiceAmount': invoiceAmount,
-                        'deadline': deadline,
-                        'amount': amount
-                    }
+                        _LOGGER.debug("Unpaid invoice found. %s, %s, %s, %s, %f, %s, %f", provider,
+                                      issuerId, invoiceNo, issuanceDate, invoiceAmount, deadline, amount)
 
-                    unpaidInvoices.append(unpaidInvoice)
+                        unpaidInvoice = {
+                            'provider': provider,
+                            'issuerId': issuerId,
+                            'invoiceNo': invoiceNo,
+                            'issuanceDate': issuanceDate,
+                            'invoiceAmount': invoiceAmount,
+                            'deadline': deadline,
+                            'amount': amount
+                        }
 
-                    unpaidInvoicePageUrl = f"https://www.dijnet.hu/ekonto/control/szamla_select?vfw_coll=szamla_list&vfw_rowid={index}&exp=K"
-                    _LOGGER.debug("Loading invoice page (%s)",
-                                  unpaidInvoicePageUrl)
+                        unpaidInvoices.append(unpaidInvoice)
 
-                    session.get(unpaidInvoicePageUrl)
+                        _LOGGER.debug("Loading invoice page (%s)", index)
 
-                    _LOGGER.debug("Loading 'szamla_letolt' page")
-                    unpaidInvoiceDownloadPageResponse = session.get(
-                        "https://www.dijnet.hu/ekonto/control/szamla_letolt")
+                        await session.get_invoice_page(index)
 
-                    _LOGGER.debug("Parsing 'szamla_letolt' page")
-                    unpaidInvoiceDownloadPageResponsePq = pq(
-                        unpaidInvoiceDownloadPageResponse.text)
+                        _LOGGER.debug("Loading 'szamla_letolt' page")
 
-                    if (self._downloadDir != ""):
-                        Path(self._downloadDir).mkdir(
-                            parents=True, exist_ok=True)
+                        unpaidInvoiceDownloadPageResponse = await session.get_invoice_download_page()
 
-                        for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a:not([href^=http])").items():
-                            href = downloadableLink.attr("href")
-                            extension = href.split("?")[0].split("_")[-1]
-                            name = href.split("?")[0][:-4]
-                            fileName = f"{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}".replace("/", "_").replace("\\", "_")
-                            downloadUrl = f"https://www.dijnet.hu/ekonto/control/{href}"
-                            _LOGGER.debug(
-                                "Downloadable file found (%s).", downloadUrl)
+                        _LOGGER.debug("Parsing 'szamla_letolt' page")
+                        unpaidInvoiceDownloadPageResponsePq = pq(unpaidInvoiceDownloadPageResponse)
 
-                            fullPath = f"{self._downloadDir}/{fileName}"
+                        if (self._downloadDir != ""):
+                            Path(self._downloadDir).mkdir(
+                                parents=True, exist_ok=True)
 
-                            if os.path.exists(fullPath):
+                            for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a:not([href^=http])").items():
+                                href = downloadableLink.attr("href")
+                                extension = href.split("?")[0].split("_")[-1]
+                                name = href.split("?")[0][:-4]
+                                fileName = f"{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}".replace(
+                                    "/", "_").replace("\\", "_")
+                                downloadUrl = f"https://www.dijnet.hu/ekonto/control/{href}"
                                 _LOGGER.debug(
-                                    "File already downloaded (%s)", fullPath)
-                            else:
-                                _LOGGER.debug(
-                                    "Downloading file (%s -> %s).", downloadUrl, fullPath)
-                                fileDownloadRequest = session.get(downloadUrl)
-                                with open(fullPath, "wb") as fil:
-                                    for chunk in fileDownloadRequest.iter_content(1024):
-                                        fil.write(chunk)
+                                    "Downloadable file found (%s).", downloadUrl)
 
-                    index = index + 1
-                self._unpaidInvoices = unpaidInvoices
-        return
+                                fullPath = f"{self._downloadDir}/{fileName}"
 
-    def login(self, session):
-        _LOGGER.debug("Loading root website")
-        session.get('https://www.dijnet.hu')
+                                if os.path.exists(fullPath):
+                                    _LOGGER.debug(
+                                        "File already downloaded (%s)", fullPath)
+                                else:
+                                    _LOGGER.debug(
+                                        "Downloading file (%s -> %s).", downloadUrl, fullPath)
+                                    fileDownloadRequest = await session.download(downloadUrl)
+                                    with open(fullPath, "wb") as fil:
+                                        for chunk in fileDownloadRequest.iter_content(1024):
+                                            fil.write(chunk)
 
-        _LOGGER.debug("Logging in to dijnet website.")
-        loginResponse = session.post('https://www.dijnet.hu/ekonto/login/login_check_ajax',
-                                     data={'username': self._username, 'password': self._password})
-        loginResponseObject = json.loads(loginResponse.text)
-        if (loginResponseObject["success"] != True):
-            _LOGGER.error("Login failed. %s", loginResponseObject["error"])
-            return False
-
-        _LOGGER.debug("Login succeeded.")
-        return True
+                        index = index + 1
+                    self._unpaidInvoices = unpaidInvoices
 
 
 class DijnetBaseSensor(Entity):
@@ -257,19 +246,20 @@ class DijnetBaseSensor(Entity):
         """Return the icon to use in the frontend, if any."""
         return ICON
 
-    def update(self):
+    async def async_update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
         _LOGGER.debug("Updating wrapper for dijnet sensor (%s).", self.name)
-        self._wrapper.updateUnpaidInvoices()
+        await self._wrapper.updateUnpaidInvoices()
         _LOGGER.debug(
             "Updating wrapper for dijnet sensor (%s) completed.", self.name)
+
         self._data = {
-            'providers': self._wrapper.getProviders(),
-            'unpaidInvoices': self._wrapper.getUnpaidInvoices()
+            'providers': await self._wrapper.getProviders(),
+            'unpaidInvoices': await self._wrapper.getUnpaidInvoices()
         }
-        self._state = len(self._wrapper.getUnpaidInvoices()) > 0
+        self._state = len(await self._wrapper.getUnpaidInvoices()) > 0
 
     def get_filename_from_cd(self, cd):
         """
@@ -289,15 +279,15 @@ class DijnetProviderSensor(DijnetBaseSensor):
         """Initialize the Dijnet provider sensor."""
         super().__init__(wrapper)
         self._provider = provider
-        self.update()
 
     @property
     def name(self):
         """Return the name of the sensor."""
         return f'Dijnet ({self._provider})'
 
-    def update(self):
-        super().update()
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    async def async_update(self):
+        await super().async_update()
         self._state = None
         amount = 0
         unpaidInvoices = []
@@ -306,7 +296,7 @@ class DijnetProviderSensor(DijnetBaseSensor):
                 amount = amount + unpaidInvoice['amount']
                 unpaidInvoices.append(unpaidInvoice)
 
-        self._attributes = { 'unpaidInvoices': unpaidInvoices }
+        self._attributes = {'unpaidInvoices': unpaidInvoices}
         self._state = amount
 
 
@@ -317,8 +307,9 @@ class DijnetTotalSensor(DijnetBaseSensor):
         """Return the name of the sensor."""
         return 'Dijnet fizetendő számlák összege'
 
-    def update(self):
-        super().update()
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    async def async_update(self):
+        await super().async_update()
         amount = 0
         for unpaidInvoice in self._data['unpaidInvoices']:
             amount = amount + unpaidInvoice['amount']

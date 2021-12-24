@@ -8,5 +8,5 @@
   "config_flow": false,
   "version": "0.2.2-beta",
   "codeowners": ["@laszlojakab"],
-  "requirements": ["requests", "PyQuery"]
+  "requirements": ["PyQuery==1.4.3"]
 }
