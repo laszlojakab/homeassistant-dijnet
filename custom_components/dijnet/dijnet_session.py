@@ -9,7 +9,7 @@ from typing import Optional, Type
 import aiohttp
 
 DATE_FORMAT = "%Y.%m.%d"
-ROOT_URL = 'https//www.dijnet.hu'
+ROOT_URL = 'https://www.dijnet.hu'
 
 
 class DijnetSession:
