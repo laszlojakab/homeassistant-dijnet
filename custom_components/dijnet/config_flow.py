@@ -33,7 +33,7 @@ class DijnetOptionsFlowHandler(OptionsFlow):
         -------
         None
         '''
-        self.data = config_entry.data
+        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: Dict[str, Any] = None
@@ -48,20 +48,20 @@ class DijnetOptionsFlowHandler(OptionsFlow):
             on the configuration screen.
         '''
         if user_input is not None:
-            self.data = self.data | user_input
-
-            return self.async_create_entry(
-                title=f'Dijnet ({self.data[CONF_USERNAME]})', data=self.data
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=self.config_entry.data | user_input
             )
+
+            return self.async_abort(reason="reconfigure_successful")
 
         options = {
             vol.Required(
                 CONF_PASSWORD,
-                default=self.data[CONF_PASSWORD]
+                default=self.config_entry.data[CONF_PASSWORD]
             ): str,
             vol.Optional(
                 CONF_DOWNLOAD_DIR,
-                default=self.data.get(CONF_DOWNLOAD_DIR)
+                default=self.config_entry.data.get(CONF_DOWNLOAD_DIR)
             ): str
         }
 

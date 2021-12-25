@@ -25,6 +25,9 @@
         "description": "Set password. Optionally set download directory where downloaded invoices should be stored. To set username remove the integration and readd.",
         "title": "Reconfigure Dijnet integration."
       }
+    },
+    "abort": {
+      "reconfigure_successful": "Reconfiguration completed. Please restart Home Assistant."
     }
   }
 }
