@@ -2,11 +2,14 @@
 '''
 Module for a Dijnet session.
 '''
+import logging
 from datetime import datetime
 from types import TracebackType
 from typing import Optional, Type
 
 import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
 
 DATE_FORMAT = "%Y.%m.%d"
 ROOT_URL = 'https://www.dijnet.hu'
@@ -228,4 +231,6 @@ class DijnetSession:
                 }
         ) as response:
             json = await response.json(content_type='text/plain')
+            if not json['success']:
+                _LOGGER.warn(json)
             return json['success']

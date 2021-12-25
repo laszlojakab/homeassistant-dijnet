@@ -13,6 +13,9 @@
     },
     "abort": {
       "already_configured": "Ez a Dijnet felhasználó már beállításra került a rendszerben."
+    },
+    "error": {
+      "invalid_username_or_password": "Hibás felhasználónév vagy jelszó."
     }
   },
   "options": {
@@ -28,6 +31,9 @@
     },
     "abort": {
       "reconfigure_successful": "Beállítás elkészült. Kérlek indítsd újra a Home Assistant-ot!"
+    },
+    "error": {
+      "invalid_username_or_password": "Hibás felhasználónév vagy jelszó."
     }
   }
 }

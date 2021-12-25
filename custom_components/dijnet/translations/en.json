@@ -13,6 +13,9 @@
     },
     "abort": {
       "already_configured": "This account has already been configured."
+    },
+    "error": {
+      "invalid_username_or_password": "Invalid username or password."
     }
   },
   "options": {
@@ -28,6 +31,9 @@
     },
     "abort": {
       "reconfigure_successful": "Reconfiguration completed. Please restart Home Assistant."
+    },
+    "error": {
+      "invalid_username_or_password": "Invalid username or password."
     }
   }
 }
