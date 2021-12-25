@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "Felhasználó név",
+          "password": "Jelszó",
+          "download_dir": "Letöltési könyvtár"
+        },
+        "description": "Állítsd be a Dijnet-es felhasználónevedet és jelszavadat. Ha szeretnéd, hogy a számlák letöltésre kerüljenek adj meg egy könyvtárnevet is a letöltés helyének!",
+        "title": "Dijnet integráció beállítása."
+      }
+    },
+    "abort": {
+      "already_configured": "Ez a Dijnet felhasználó már beállításra került a rendszerben."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "password": "Jelszó",
+          "download_dir": "Letöltési könyvtár"
+        },
+        "description": "Állítsd be a Dijnet-es jelszavadat. Ha szeretnéd, hogy a számlák letöltésre kerüljenek adj meg egy könyvtárnevet is a letöltés helyének! Ha felhasználó nevet szeretnél váltani, akkor távolítsd el az integrációt, majd add hozzá újra!",
+        "title": "Dijnet integráció beállítása."
+      }
+    }
+  }
+}
