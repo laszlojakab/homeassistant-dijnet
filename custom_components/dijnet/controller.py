@@ -4,8 +4,10 @@ import re
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List
 
 from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.util import Throttle
 from pyquery import PyQuery as pq
 
 from .const import DATA_CONTROLLER, DOMAIN
@@ -14,6 +16,57 @@ from .dijnet_session import DijnetSession
 _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
+MIN_TIME_BETWEEN_ISSUER_UPDATES = timedelta(days=1)
+
+
+class InvoiceIssuer():
+    '''
+    Represents an invoice issuer.
+    '''
+
+    def __init__(self, issuer_id: str, issuer_name: str, displayname: str):
+        '''
+        Initialize a new instance of InvoiceIssuer class.
+
+        Parameters
+        ----------
+        issuer_id: str
+            The registration ID at the invoice issuer.
+        issuer_name: str
+            The name of the invoice issuer.
+        displayname: str
+            The display name of the registration.
+        '''
+        self._issuer_id = issuer_id
+        self._issuer_name = issuer_name
+        self._displayname = displayname
+
+    def __str__(self) -> str:
+        '''
+        Returns the string representation of the class.
+        '''
+        return f'{self.issuer} - {self.issuer_id} - {self.displayname}'
+
+    @property
+    def issuer_id(self) -> str:
+        '''
+        Gets the invoice issuer id.
+        '''
+        return self._issuer_id
+
+    @property
+    def displayname(self) -> str:
+        '''
+        Gets the dislayname.
+        '''
+        return self._displayname
+
+    @property
+    def issuer(self) -> str:
+        '''
+        Gets the invoice issuer name.
+        '''
+        return self._issuer_name
 
 
 class DijnetController:
@@ -24,17 +77,24 @@ class DijnetController:
         self._downloadDir = downloadDir
         self._unpaidInvoices = None
         self._unpaidInvoicesLastUpdate = None
-        self._providers = None
+        self._issuers: List[InvoiceIssuer] = []
 
     async def getUnpaidInvoices(self):
         if (self._unpaidInvoices == None):
             await self.updateUnpaidInvoices()
         return self._unpaidInvoices
 
-    async def getProviders(self):
-        if (self._providers == None):
-            await self.updateProviders()
-        return self._providers
+    async def get_issuers(self) -> List[InvoiceIssuer]:
+        '''
+        Gets the list of registered invoice issuers.
+
+        Returns
+        -------
+        List[InvoiceIssuer]
+            The list of registered invoice issuers.
+        '''
+        await self.update_registered_issuers()
+        return self._issuers
 
     def isUnpaidInvoicesUpdatedNotLongAgo(self):
         if (self._unpaidInvoicesLastUpdate == None):
@@ -48,8 +108,12 @@ class DijnetController:
 
         return (datetime.now() - self._unpaidInvoicesLastUpdate)
 
-    async def updateProviders(self):
-        self._providers = []
+    @Throttle(MIN_TIME_BETWEEN_ISSUER_UPDATES)
+    async def update_registered_issuers(self):
+        '''
+        Updates the registered issuers list.
+        '''
+        issuers: List[InvoiceIssuer] = []
 
         _LOGGER.debug("Updating providers.")
 
@@ -66,14 +130,19 @@ class DijnetController:
             await session.get_new_providers_page()
 
             _LOGGER.debug("Loading 'regszolg_list' page.")
-            providersResponse = await session.get_registered_providers_page()
+            providers_response = await session.get_registered_providers_page()
 
             _LOGGER.debug("Parsing 'regszolg_list' page.")
-            providersResponsePq = pq(providersResponse)
-            for row in providersResponsePq.find(".szamla_table > tbody > tr").items():
-                providerName = row.children("td:nth-child(3)").text()
-                _LOGGER.debug("Provider found (%s)", providerName)
-                self._providers.append(providerName)
+            providers_response_pquery = pq(providers_response)
+            for row in providers_response_pquery.find(".szamla_table > tbody > tr").items():
+                issuer_name = row.children("td:nth-child(1)").text()
+                issuer_id = row.children("td:nth-child(2)").text()
+                display_name = row.children("td:nth-child(3)").text()
+                issuer = InvoiceIssuer(issuer_id, issuer_name, display_name)
+                issuers.append(issuer)
+                _LOGGER.debug("Issuer found (%s)", issuer)
+
+            self._issuers = issuers
 
     async def updateUnpaidInvoices(self):
         with self._lock:
