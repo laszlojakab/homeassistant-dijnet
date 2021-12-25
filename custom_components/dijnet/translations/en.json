@@ -1,31 +1,33 @@
 {
-    "config": {
-      "step": {
-        "user": {
-          "data": {
-            "username": "Username",
-            "password": "Password",
-            "download_dir": "Download directory"
-          },
-          "description": "Set username and password. Optionally set download directory where downloaded invoices should be stored.",
-          "title": "Configure Dijnet integration."
-        }
-      },
-      "abort": {
-        "already_configured": "This account has already been configured."
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "download_dir": "Download directory"
+        },
+        "description": "Set username and password. Optionally set download directory where downloaded invoices should be stored.",
+        "title": "Configure Dijnet integration."
       }
     },
-    "options": {
-      "step": {
-        "init": {
-          "data": {
-            "password": "Password",
-            "download_dir": "Download directory"
-          },
-          "description": "Set password. Optionally set download directory where downloaded invoices should be stored. To set username remove the integration and readd.",
-          "title": "Reconfigure Dijnet integration."
-        }
+    "abort": {
+      "already_configured": "This account has already been configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "password": "Password",
+          "download_dir": "Download directory"
+        },
+        "description": "Set password. Optionally set download directory where downloaded invoices should be stored. To set username remove the integration and readd.",
+        "title": "Reconfigure Dijnet integration."
       }
+    },
+    "abort": {
+      "reconfigure_successful": "Reconfiguration completed. Please restart Home Assistant."
     }
   }
-  
+}
