@@ -1,37 +1,34 @@
 """Support for Dijnet."""
 import logging
-import os.path
 import re
-import threading
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from custom_components.dijnet.dijnet_session import DijnetSession
 from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import (ConfigType, DiscoveryInfoType,
                                           HomeAssistantType)
 from homeassistant.util import Throttle
-from pyquery import PyQuery as pq
+
+from .const import CONF_DOWNLOAD_DIR, DOMAIN
+from .controller import get_controller
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 ICON = "mdi:currency-usd"
 UNIT = "Ft"
 _LOGGER = logging.getLogger(__name__)
 
-CONF_DOWNLOAD_DIR = "download_dir"
-CONF_DOWNLOAD_DIR_DEFAULT = ""
 DEFAULT_NAME = "Dijnet Sensor"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
-        vol.Optional(CONF_DOWNLOAD_DIR, default=CONF_DOWNLOAD_DIR_DEFAULT): cv.string
+        vol.Optional(CONF_DOWNLOAD_DIR, default=''): cv.string
     }
 )
 
@@ -39,174 +36,61 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 async def async_setup_platform(
     hass: HomeAssistantType,
     config: ConfigType,
-    add_entities: AddEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType = None,
 ) -> None:
+    """Import yaml config and initiates config flow for Dijnet integration."""
 
-    """Set up the Dijnet sensor."""
-    username = config[CONF_USERNAME]
-    password = config[CONF_PASSWORD]
-    downloadDir = config[CONF_DOWNLOAD_DIR]
-    wrapper = DijnetWrapper(username, password, downloadDir)
+    # Check if entry config exists and skips import if it does.
+    if hass.config_entries.async_entries(DOMAIN):
+        _LOGGER.warning('Setting up Dijnet integration from yaml is deprecated. Please remove configuration from yaml.')
+        return
 
-    _LOGGER.debug("Setting up platform.")
-
-    for provider in (await wrapper.getProviders()):
-        add_entities(
-            [DijnetProviderSensor(provider, wrapper)])
-        _LOGGER.debug("Sensor added (%s)", provider)
-
-    _LOGGER.debug("Adding total sensor")
-    add_entities([DijnetTotalSensor(wrapper)], True)
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_IMPORT},
+            data=config,
+        )
+    )
 
 
-class DijnetWrapper:
-    def __init__(self, username, password, downloadDir):
-        self._lock = threading.Lock()
-        self._username = username
-        self._password = password
-        self._downloadDir = downloadDir
-        self._unpaidInvoices = None
-        self._unpaidInvoicesLastUpdate = None
-        self._providers = None
+async def async_setup_entry(
+    hass: HomeAssistantType,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback
+) -> bool:
+    '''
+    Setup of Dijnet sensors for the specified config_entry.
 
-    async def getUnpaidInvoices(self):
-        if (self._unpaidInvoices == None):
-            await self.updateUnpaidInvoices()
-        return self._unpaidInvoices
+    Parameters
+    ----------
+    hass: homeassistant.helpers.typing.HomeAssistantType
+        The Home Assistant instance.
+    config_entry: homeassistant.helpers.typing.ConfigEntry
+        The config entry which is used to create sensors.
+    async_add_entities: homeassistant.helpers.entity_platform.AddEntitiesCallback
+        The callback which can be used to add new entities to Home Assistant.
 
-    async def getProviders(self):
-        if (self._providers == None):
-            await self.updateProviders()
-        return self._providers
+    Returns
+    -------
+    bool
+        The value indicates whether the setup succeeded.
+    '''
+    _LOGGER.info('Setting up Dijnet sensors.')
 
-    def isUnpaidInvoicesUpdatedNotLongAgo(self):
-        if (self._unpaidInvoicesLastUpdate == None):
-            return False
+    controller = get_controller(hass, config_entry.data[CONF_USERNAME])
 
-        return self.getUnpaidInvoicesAge() < MIN_TIME_BETWEEN_UPDATES
+    for provider in (await controller.getProviders()):
+        async_add_entities(
+            [DijnetProviderSensor(provider, controller)])
+        _LOGGER.debug('Sensor added (%s)', provider)
 
-    def getUnpaidInvoicesAge(self):
-        if (self._unpaidInvoicesLastUpdate == None):
-            return None
+    _LOGGER.debug('Adding total sensor')
+    async_add_entities([DijnetTotalSensor(controller)], True)
 
-        return (datetime.now() - self._unpaidInvoicesLastUpdate)
-
-    async def updateProviders(self):
-        self._providers = []
-
-        _LOGGER.debug("Updating providers.")
-
-        async with DijnetSession() as session:
-            await session.get_root_page()
-
-            if not await session.post_login(self._username, self._password):
-                return
-
-            _LOGGER.debug("Loading main page.")
-            await session.get_main_page()
-
-            _LOGGER.debug("Loading 'regszolg_new' page.")
-            await session.get_new_providers_page()
-
-            _LOGGER.debug("Loading 'regszolg_list' page.")
-            providersResponse = await session.get_registered_providers_page()
-
-            _LOGGER.debug("Parsing 'regszolg_list' page.")
-            providersResponsePq = pq(providersResponse)
-            for row in providersResponsePq.find(".szamla_table > tbody > tr").items():
-                providerName = row.children("td:nth-child(3)").text()
-                _LOGGER.debug("Provider found (%s)", providerName)
-                self._providers.append(providerName)
-
-    async def updateUnpaidInvoices(self):
-        with self._lock:
-            if (self.isUnpaidInvoicesUpdatedNotLongAgo()):
-                _LOGGER.debug("Skipping unpaid invoices update. Data updated recently (%i seconds ago)",
-                              self.getUnpaidInvoicesAge().seconds)
-                return
-            else:
-                _LOGGER.debug("Updating unpaid invoices.")
-                self._unpaidInvoicesLastUpdate = datetime.now()
-                async with DijnetSession() as session:
-                    await session.get_root_page()
-
-                    if not (await session.post_login(self._username, self._password)):
-                        return
-
-                    _LOGGER.debug("Loading 'main' website.")
-                    unpaidInvoicesPageResponse = await session.get_main_page()
-
-                    _LOGGER.debug("Parsing 'main' website.")
-                    unpaidInvoicesPq = pq(unpaidInvoicesPageResponse)
-                    unpaidInvoices = []
-                    index = 0
-                    for row in unpaidInvoicesPq.find(".szamla_table > tbody > tr").items():
-                        provider = row.children("td:nth-child(1)").text()
-                        issuerId = row.children("td:nth-child(2)").text()
-                        invoiceNo = row.children("td:nth-child(3)").text()
-                        issuanceDate = row.children("td:nth-child(4)").text()
-                        invoiceAmount = float(
-                            re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(5)").text()))
-                        deadline = row.children("td:nth-child(6)").text()
-                        amount = float(
-                            re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
-
-                        _LOGGER.debug("Unpaid invoice found. %s, %s, %s, %s, %f, %s, %f", provider,
-                                      issuerId, invoiceNo, issuanceDate, invoiceAmount, deadline, amount)
-
-                        unpaidInvoice = {
-                            'provider': provider,
-                            'issuerId': issuerId,
-                            'invoiceNo': invoiceNo,
-                            'issuanceDate': issuanceDate,
-                            'invoiceAmount': invoiceAmount,
-                            'deadline': deadline,
-                            'amount': amount
-                        }
-
-                        unpaidInvoices.append(unpaidInvoice)
-
-                        _LOGGER.debug("Loading invoice page (%s)", index)
-
-                        await session.get_invoice_page(index)
-
-                        _LOGGER.debug("Loading 'szamla_letolt' page")
-
-                        unpaidInvoiceDownloadPageResponse = await session.get_invoice_download_page()
-
-                        _LOGGER.debug("Parsing 'szamla_letolt' page")
-                        unpaidInvoiceDownloadPageResponsePq = pq(unpaidInvoiceDownloadPageResponse)
-
-                        if (self._downloadDir != ""):
-                            Path(self._downloadDir).mkdir(
-                                parents=True, exist_ok=True)
-
-                            for downloadableLink in unpaidInvoiceDownloadPageResponsePq.find("#tab_szamla_letolt a:not([href^=http])").items():
-                                href = downloadableLink.attr("href")
-                                extension = href.split("?")[0].split("_")[-1]
-                                name = href.split("?")[0][:-4]
-                                fileName = f"{name}_{issuanceDate.replace('.', '')}_{invoiceNo}.{extension}".replace(
-                                    "/", "_").replace("\\", "_")
-                                downloadUrl = f"https://www.dijnet.hu/ekonto/control/{href}"
-                                _LOGGER.debug(
-                                    "Downloadable file found (%s).", downloadUrl)
-
-                                fullPath = f"{self._downloadDir}/{fileName}"
-
-                                if os.path.exists(fullPath):
-                                    _LOGGER.debug(
-                                        "File already downloaded (%s)", fullPath)
-                                else:
-                                    _LOGGER.debug(
-                                        "Downloading file (%s -> %s).", downloadUrl, fullPath)
-                                    fileDownloadRequest = await session.download(downloadUrl)
-                                    with open(fullPath, "wb") as fil:
-                                        for chunk in fileDownloadRequest.iter_content(1024):
-                                            fil.write(chunk)
-
-                        index = index + 1
-                    self._unpaidInvoices = unpaidInvoices
+    _LOGGER.info('Setting up Helios EasyControls sensors completed.')
+    return True
 
 
 class DijnetBaseSensor(Entity):
