@@ -156,10 +156,9 @@ class DijnetController:
                                 else:
                                     _LOGGER.debug(
                                         "Downloading file (%s -> %s).", downloadUrl, fullPath)
-                                    fileDownloadRequest = await session.download(downloadUrl)
-                                    with open(fullPath, "wb") as fil:
-                                        for chunk in fileDownloadRequest.iter_content(1024):
-                                            fil.write(chunk)
+                                    file_content = await session.download(downloadUrl)
+                                    with open(fullPath, "wb") as file:
+                                        file.write(file_content)
 
                         index = index + 1
                     self._unpaidInvoices = unpaidInvoices
