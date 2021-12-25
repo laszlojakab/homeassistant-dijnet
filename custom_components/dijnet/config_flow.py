@@ -13,6 +13,7 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_DOWNLOAD_DIR, DOMAIN
+from .dijnet_session import DijnetSession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,14 +48,7 @@ class DijnetOptionsFlowHandler(OptionsFlow):
             The dictionary contains the settings entered by the user
             on the configuration screen.
         '''
-        if user_input is not None:
-            self.hass.config_entries.async_update_entry(
-                self.config_entry, data=self.config_entry.data | user_input
-            )
-
-            return self.async_abort(reason="reconfigure_successful")
-
-        options = {
+        data_schema = vol.Schema({
             vol.Required(
                 CONF_PASSWORD,
                 default=self.config_entry.data[CONF_PASSWORD]
@@ -63,9 +57,27 @@ class DijnetOptionsFlowHandler(OptionsFlow):
                 CONF_DOWNLOAD_DIR,
                 default=self.config_entry.data.get(CONF_DOWNLOAD_DIR)
             ): str
-        }
+        })
 
-        return self.async_show_form(step_id='init', data_schema=vol.Schema(options))
+        if user_input is not None:
+            async with DijnetSession() as session:
+                if not await session.post_login(
+                    self.config_entry.data[CONF_USERNAME],
+                    user_input[CONF_PASSWORD]
+                ):
+                    return self.async_show_form(
+                        step_id='init',
+                        data_schema=data_schema,
+                        errors={'base': 'invalid_username_or_password'}
+                    )
+
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=self.config_entry.data | user_input
+            )
+
+            return self.async_abort(reason="reconfigure_successful")
+
+        return self.async_show_form(step_id='init', data_schema=data_schema)
 
 
 @HANDLERS.register(DOMAIN)
@@ -93,7 +105,7 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
         '''
         return DijnetOptionsFlowHandler(config_entry)
 
-    async def async_step_user(self, user_info: Dict[str, Any]) -> FlowResult:
+    async def async_step_user(self, user_input: Dict[str, Any]) -> FlowResult:
         '''
         Handles the step when integration added from the UI.
         '''
@@ -103,18 +115,26 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_DOWNLOAD_DIR): str
         })
 
-        if user_info is not None:
-            await self.async_set_unique_id(user_info[CONF_USERNAME])
+        if user_input is not None:
+            async with DijnetSession() as session:
+                if not await session.post_login(user_input[CONF_USERNAME], user_input[CONF_PASSWORD]):
+                    return self.async_show_form(
+                        step_id='user',
+                        data_schema=data_schema,
+                        errors={CONF_USERNAME: 'invalid_username_or_password'}
+                    )
+
+            await self.async_set_unique_id(user_input[CONF_USERNAME])
             self._abort_if_unique_id_configured()
 
             data = {
-                CONF_USERNAME: user_info[CONF_USERNAME],
-                CONF_PASSWORD: user_info[CONF_PASSWORD],
-                CONF_DOWNLOAD_DIR: user_info.get(CONF_DOWNLOAD_DIR, '')
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_PASSWORD: user_input[CONF_PASSWORD],
+                CONF_DOWNLOAD_DIR: user_input.get(CONF_DOWNLOAD_DIR, '')
             }
 
             return self.async_create_entry(
-                title=f'Dijnet ({user_info[CONF_USERNAME]})', data=data
+                title=f'Dijnet ({user_input[CONF_USERNAME]})', data=data
             )
 
         return self.async_show_form(
