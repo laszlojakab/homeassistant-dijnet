@@ -15,7 +15,7 @@ from homeassistant.helpers.typing import (ConfigType, DiscoveryInfoType,
 from homeassistant.util import Throttle
 
 from .const import CONF_DOWNLOAD_DIR, DOMAIN
-from .controller import get_controller
+from .controller import DijnetController, get_controller
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 ICON = "mdi:currency-usd"
@@ -43,7 +43,8 @@ async def async_setup_platform(
 
     # Check if entry config exists and skips import if it does.
     if hass.config_entries.async_entries(DOMAIN):
-        _LOGGER.warning('Setting up Dijnet integration from yaml is deprecated. Please remove configuration from yaml.')
+        _LOGGER.warning(
+            'Setting up Dijnet integration from yaml is deprecated. Please remove configuration from yaml.')
         return
 
     hass.async_create_task(
@@ -81,10 +82,11 @@ async def async_setup_entry(
 
     controller = get_controller(hass, config_entry.data[CONF_USERNAME])
 
-    for provider in (await controller.getProviders()):
+    for registered_invoice_issuer in await controller.get_issuers():
         async_add_entities(
-            [DijnetProviderSensor(provider, controller)])
-        _LOGGER.debug('Sensor added (%s)', provider)
+            [DijnetProviderSensor(registered_invoice_issuer.displayname, controller)]
+        )
+        _LOGGER.debug('Sensor added (%s)', registered_invoice_issuer)
 
     _LOGGER.debug('Adding total sensor')
     async_add_entities([DijnetTotalSensor(controller)], True)
@@ -94,7 +96,7 @@ async def async_setup_entry(
 
 
 class DijnetBaseSensor(Entity):
-    def __init__(self, wrapper):
+    def __init__(self, wrapper: DijnetController):
         self._state = None
         self._wrapper = wrapper
         self._attributes = {}
@@ -140,7 +142,7 @@ class DijnetBaseSensor(Entity):
             "Updating wrapper for dijnet sensor (%s) completed.", self.name)
 
         self._data = {
-            'providers': await self._wrapper.getProviders(),
+            'providers': await self._wrapper.get_issuers(),
             'unpaidInvoices': await self._wrapper.getUnpaidInvoices()
         }
         self._state = len(await self._wrapper.getUnpaidInvoices()) > 0
