@@ -59,6 +59,7 @@ class DijnetSession:
         bytes
             The main page content.
         '''
+        _LOGGER.debug('Getting main page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/main') as response:
             return await response.read()
 
@@ -71,6 +72,7 @@ class DijnetSession:
         bytes
             The new providers page content.
         '''
+        _LOGGER.debug('Getting regszolg_new page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/regszolg_new') as response:
             return await response.read()
 
@@ -83,6 +85,7 @@ class DijnetSession:
         bytes
             The registered providers page content.
         '''
+        _LOGGER.debug('Getting regszolg_list page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/regszolg_list') as response:
             return await response.read()
 
@@ -100,6 +103,7 @@ class DijnetSession:
         bytes
             The invoice page content.
         '''
+        _LOGGER.debug('Getting szamla_select page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/szamla_select?vfw_coll=szamla_list&vfw_rowid={index}&exp=K') as response:
             return await response.read()
 
@@ -112,6 +116,7 @@ class DijnetSession:
         bytes
             The invoice history page content.
         '''
+        _LOGGER.debug('Getting szamla_hist page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/szamla_hist') as response:
             return await response.read()
 
@@ -124,6 +129,7 @@ class DijnetSession:
         bytes
             The invoice list page content.
         '''
+        _LOGGER.debug('Getting szamla_list page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/szamla_list') as response:
             return await response.read()
 
@@ -136,6 +142,7 @@ class DijnetSession:
         bytes
             The invoice download page content.
         '''
+        _LOGGER.debug('Getting szamla_letolt page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/szamla_letolt') as response:
             return await response.read()
 
@@ -148,6 +155,7 @@ class DijnetSession:
         bytes
             The invoice search page content.
         '''
+        _LOGGER.debug('Getting szamla_search page.')
         async with self._session.get(f'{ROOT_URL}/ekonto/control/szamla_search') as response:
             return await response.read()
 
@@ -177,6 +185,7 @@ class DijnetSession:
         bytes
             The search result.
         '''
+        _LOGGER.debug('Posting search to szamla_search_submit.')
         async with self._session.post(
             f'{ROOT_URL}/ekonto/control/szamla_search_submit',
             data={
@@ -204,6 +213,7 @@ class DijnetSession:
         bytes
             The downloaded content.
         '''
+        _LOGGER.debug('Downloading file: %s', url)
         async with self._session.get(url) as response:
             return await response.read()
 
@@ -223,6 +233,7 @@ class DijnetSession:
         bool
             The value indicates whether the login was successful.
         '''
+        _LOGGER.debug('Posting login information to login_check_ajax.')
         async with self._session.post(
                 'https://www.dijnet.hu/ekonto/login/login_check_ajax',
                 data={
