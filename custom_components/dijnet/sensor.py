@@ -2,6 +2,7 @@
 import logging
 import re
 from datetime import timedelta
+from typing import List
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -15,7 +16,7 @@ from homeassistant.helpers.typing import (ConfigType, DiscoveryInfoType,
 from homeassistant.util import Throttle
 
 from .const import CONF_DOWNLOAD_DIR, DOMAIN
-from .controller import DijnetController, get_controller
+from .controller import DijnetController, Invoice, get_controller
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 ICON = "mdi:currency-usd"
@@ -91,7 +92,7 @@ async def async_setup_entry(
     _LOGGER.debug('Adding total sensor')
     async_add_entities([DijnetTotalSensor(controller)], True)
 
-    _LOGGER.info('Setting up Helios EasyControls sensors completed.')
+    _LOGGER.info('Setting up Dijnet sensors completed.')
     return True
 
 
@@ -137,15 +138,15 @@ class DijnetBaseSensor(Entity):
         This is the only method that should fetch new data for Home Assistant.
         """
         _LOGGER.debug("Updating wrapper for dijnet sensor (%s).", self.name)
-        await self._wrapper.updateUnpaidInvoices()
+        await self._wrapper.update_invoices()
         _LOGGER.debug(
             "Updating wrapper for dijnet sensor (%s) completed.", self.name)
 
         self._data = {
             'providers': await self._wrapper.get_issuers(),
-            'unpaidInvoices': await self._wrapper.getUnpaidInvoices()
+            'unpaidInvoices': await self._wrapper.get_unpaid_invoices()
         }
-        self._state = len(await self._wrapper.getUnpaidInvoices()) > 0
+        self._state = len(await self._wrapper.get_unpaid_invoices()) > 0
 
     def get_filename_from_cd(self, cd):
         """
@@ -161,7 +162,7 @@ class DijnetBaseSensor(Entity):
 
 class DijnetProviderSensor(DijnetBaseSensor):
     # """Representation of a Dijnet provider sensor."""
-    def __init__(self, provider, wrapper):
+    def __init__(self, provider, wrapper: DijnetController):
         """Initialize the Dijnet provider sensor."""
         super().__init__(wrapper)
         self._provider = provider
@@ -176,13 +177,14 @@ class DijnetProviderSensor(DijnetBaseSensor):
         await super().async_update()
         self._state = None
         amount = 0
+        all_unpaid_invoices: List[Invoice] = self._data['unpaidInvoices']
         unpaidInvoices = []
-        for unpaidInvoice in self._data['unpaidInvoices']:
-            if (unpaidInvoice['issuerId'] == self._provider):
-                amount = amount + unpaidInvoice['amount']
-                unpaidInvoices.append(unpaidInvoice)
+        for unpaidInvoice in all_unpaid_invoices:
+            if (unpaidInvoice.displayname == self._provider):
+                amount = amount + unpaidInvoice.amount
+                unpaidInvoices.append(unpaidInvoice.to_dictionary())
 
-        self._attributes = {'unpaidInvoices': unpaidInvoices}
+        self._attributes = { 'unpaidInvoices': unpaidInvoices }
         self._state = amount
 
 
@@ -197,6 +199,7 @@ class DijnetTotalSensor(DijnetBaseSensor):
     async def async_update(self):
         await super().async_update()
         amount = 0
-        for unpaidInvoice in self._data['unpaidInvoices']:
-            amount = amount + unpaidInvoice['amount']
+        invoices : List[Invoice] = self._data['unpaidInvoices']
+        for unpaidInvoice in invoices:
+            amount = amount + unpaidInvoice.amount
         self._state = amount
