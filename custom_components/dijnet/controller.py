@@ -2,6 +2,7 @@
 '''
 Module for Dijnet controller.
 '''
+import json
 import logging
 import re
 from datetime import datetime, timedelta
@@ -28,7 +29,7 @@ REGISTRY_FILENAME = ".dijnet_registry.yaml"
 ATTR_REGISTRY_NEXT_QUERY_DATE = "next_query_date"
 
 ATTR_PROVIDER = "provider"
-ATTR_DISPLAYNAME = "displayname"
+ATTR_DISPLAY_NAME = "display_name"
 ATTR_INVOICE_NO = "invoice_no"
 ATTR_ISSUANCE_DATE = "issuance_date"
 ATTR_DEADLINE = "deadline"
@@ -42,7 +43,7 @@ class InvoiceIssuer():
     Represents an invoice issuer.
     '''
 
-    def __init__(self, issuer_id: str, issuer_name: str, displayname: str):
+    def __init__(self, issuer_id: str, issuer_name: str, display_name: str, providers: List[str]):
         '''
         Initialize a new instance of InvoiceIssuer class.
 
@@ -52,18 +53,21 @@ class InvoiceIssuer():
             The registration ID at the invoice issuer.
         issuer_name: str
             The name of the invoice issuer.
-        displayname: str
+        display_name: str
             The display name of the registration.
+        providers: str
+            The list of providers belongs to issuer.
         '''
         self._issuer_id = issuer_id
         self._issuer_name = issuer_name
-        self._displayname = displayname
+        self._display_name = display_name
+        self._providers = providers
 
     def __str__(self) -> str:
         '''
         Returns the string representation of the class.
         '''
-        return f'{self.issuer} - {self.issuer_id} - {self.displayname}'
+        return f'{self.issuer} - {self.issuer_id} - {self.display_name} - {self.providers}'
 
     @property
     def issuer_id(self) -> str:
@@ -73,11 +77,11 @@ class InvoiceIssuer():
         return self._issuer_id
 
     @property
-    def displayname(self) -> str:
+    def display_name(self) -> str:
         '''
-        Gets the dislayname.
+        Gets the dislay name.
         '''
-        return self._displayname
+        return self._display_name
 
     @property
     def issuer(self) -> str:
@@ -85,6 +89,13 @@ class InvoiceIssuer():
         Gets the invoice issuer name.
         '''
         return self._issuer_name
+
+    @property
+    def providers(self) -> List[str]:
+        '''
+        Gets the list of providers belongs to the issuer
+        '''
+        return self._providers
 
 
 class Invoice:
@@ -95,7 +106,7 @@ class Invoice:
     def __init__(
         self,
         provider: str,
-        displayname: str,
+        display_name: str,
         invoice_no: str,
         issuance_date: datetime,
         amount: int,
@@ -108,8 +119,8 @@ class Invoice:
         ----------
         provider: str
             The provider.
-        displayname: str
-            The displayname.
+        display_name: str
+            The display name.
         invoice_no: str
             The invoice number.
         issuance_date: datetime
@@ -120,7 +131,7 @@ class Invoice:
             The deadline.
         '''
         self._provider = provider
-        self._displayname = displayname
+        self._display_name = display_name
         self._invoice_no = invoice_no
         self._issuance_date = issuance_date
         self._amount = amount
@@ -134,11 +145,11 @@ class Invoice:
         return self._provider
 
     @property
-    def displayname(self) -> str:
+    def display_name(self) -> str:
         '''
-        Gets the displayname.
+        Gets the display name.
         '''
-        return self._displayname
+        return self._display_name
 
     @property
     def invoice_no(self) -> str:
@@ -184,7 +195,7 @@ class Invoice:
         '''
         return {
             ATTR_PROVIDER: self._provider,
-            ATTR_DISPLAYNAME: self.displayname,
+            ATTR_DISPLAY_NAME: self.display_name,
             ATTR_INVOICE_NO: self.invoice_no,
             ATTR_ISSUANCE_DATE: self.issuance_date,
             ATTR_AMOUNT: self.amount,
@@ -203,7 +214,7 @@ class PaidInvoice(Invoice):
     def __init__(
         self,
         provider: str,
-        displayname: str,
+        display_name: str,
         invoice_no: str,
         issuance_date: datetime,
         amount: int,
@@ -217,8 +228,8 @@ class PaidInvoice(Invoice):
         ----------
         provider: str
             The provider.
-        displayname: str
-            The displayname.
+        display_name: str
+            The display name.
         invoice_no: str
             The invoice number.
         issuance_date: datetime
@@ -230,7 +241,7 @@ class PaidInvoice(Invoice):
         paid_at: datetime
             The date of payment.
         '''
-        super().__init__(provider, displayname, invoice_no, issuance_date, amount, deadline)
+        super().__init__(provider, display_name, invoice_no, issuance_date, amount, deadline)
         self._paid_at = paid_at
 
     @property
@@ -257,7 +268,7 @@ class PaidInvoice(Invoice):
         '''
         return PaidInvoice(
             dictionary[ATTR_PROVIDER],
-            dictionary[ATTR_DISPLAYNAME],
+            dictionary[ATTR_DISPLAY_NAME],
             dictionary[ATTR_INVOICE_NO],
             dictionary[ATTR_ISSUANCE_DATE].date().isoformat() if isinstance(
                 dictionary[ATTR_ISSUANCE_DATE], datetime) else dictionary[ATTR_ISSUANCE_DATE],
@@ -362,16 +373,27 @@ class DijnetController:
 
             await session.get_main_page()
 
+            search_page = await session.get_invoice_search_page()
+
+            providers_json = re.search(
+                r'var ropts = (.*);', search_page.decode("windows-1252")
+            ).groups(1)[0]
+
+            raw_providers: List[Any] = json.loads(providers_json)
+
             await session.get_new_providers_page()
 
-            providers_response = await session.get_registered_providers_page()
+            invoice_providers_response = await session.get_registered_providers_page()
 
-            providers_response_pquery = pq(providers_response)
-            for row in providers_response_pquery.find(".szamla_table > tbody > tr").items():
+            invoice_providers_response_pquery = pq(invoice_providers_response)
+            for row in invoice_providers_response_pquery.find(".szamla_table > tbody > tr").items():
                 issuer_name = row.children("td:nth-child(1)").text()
                 issuer_id = row.children("td:nth-child(2)").text()
                 display_name = row.children("td:nth-child(3)").text()
-                issuer = InvoiceIssuer(issuer_id, issuer_name, display_name)
+                providers = [
+                    raw_provider['szlaszolgnev'] for raw_provider in raw_providers if raw_provider['alias'] == display_name
+                ]
+                issuer = InvoiceIssuer(issuer_id, issuer_name, display_name, providers)
                 issuers.append(issuer)
                 _LOGGER.debug("Issuer found (%s)", issuer)
 
@@ -428,7 +450,7 @@ class DijnetController:
                     possible_new_unpaid_invoices.append(invoice)
 
                 if self._download_dir != '':
-                    directory = path.join(self._download_dir, slugify(invoice.displayname))
+                    directory = path.join(self._download_dir, slugify(invoice.provider))
                     makedirs(directory, exist_ok=True)
                     if invoice is not PaidInvoice:
                         await session.get_invoice_page(index)
@@ -443,8 +465,8 @@ class DijnetController:
                         extension = href.split('?')[0].split('_')[-1]
                         name = href.split('?')[0][:-4]
                         filename = slugify(
-                            f"{name}_{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}.{extension}"
-                        )
+                            f"{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
+                        )+f'.{extension}'
                         download_url = f"https://www.dijnet.hu/ekonto/control/{href}"
                         _LOGGER.debug('Downloadable file found (%s).', download_url)
 
@@ -520,7 +542,7 @@ class DijnetController:
 
     def _create_invoice_from_row(self, row: PyQuery, paid_at: datetime = None) -> Invoice:
         provider = row.children('td:nth-child(1)').text()
-        displayname = row.children('td:nth-child(2)').text()
+        display_name = row.children('td:nth-child(2)').text()
         invoice_no = row.children('td:nth-child(3)').text()
         issuance_date = datetime.strptime(row.children(
             'td:nth-child(4)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
@@ -533,7 +555,7 @@ class DijnetController:
         if paid_at:
             invoice = PaidInvoice(
                 provider,
-                displayname,
+                display_name,
                 invoice_no,
                 issuance_date,
                 amount,
@@ -543,7 +565,7 @@ class DijnetController:
         else:
             invoice = Invoice(
                 provider,
-                displayname,
+                display_name,
                 invoice_no,
                 issuance_date,
                 amount,
