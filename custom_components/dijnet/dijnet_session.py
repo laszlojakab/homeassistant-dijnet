@@ -243,5 +243,5 @@ class DijnetSession:
         ) as response:
             json = await response.json(content_type='text/plain')
             if not json['success']:
-                _LOGGER.warn(json)
+                _LOGGER.warning(json)
             return json['success']
