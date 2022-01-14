@@ -5,9 +5,9 @@ Module for Dijnet controller.
 import json
 import logging
 import re
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from os import makedirs, path, remove
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 import yaml
 from homeassistant.helpers.typing import HomeAssistantType
@@ -20,22 +20,27 @@ from .dijnet_session import DijnetSession
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_DATE = "1990-01-01"
-DATE_FORMAT = "%Y.%m.%d"
+MIN_DATE = date(1990, 1, 1)
+DATE_FORMAT = '%Y.%m.%d'
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 MIN_TIME_BETWEEN_ISSUER_UPDATES = timedelta(days=1)
-PAID_INVOICES_FILENAME = ".dijnet_paid_invoices_{0}.yaml"
-REGISTRY_FILENAME = ".dijnet_registry_{0}.yaml"
-ATTR_REGISTRY_NEXT_QUERY_DATE = "next_query_date"
+PAID_INVOICES_FILENAME = '.dijnet_paid_invoices_{0}.yaml'
+REGISTRY_FILENAME = '.dijnet_registry_{0}.yaml'
+ATTR_REGISTRY_NEXT_QUERY_DATE = 'next_query_date'
 
-ATTR_PROVIDER = "provider"
-ATTR_DISPLAY_NAME = "display_name"
-ATTR_INVOICE_NO = "invoice_no"
-ATTR_ISSUANCE_DATE = "issuance_date"
-ATTR_DEADLINE = "deadline"
-ATTR_AMOUNT = "amount"
-PAID_KEY = "paid"
-ATTR_PAID_AT = "paid_at"
+ATTR_PROVIDER = 'provider'
+ATTR_DISPLAY_NAME = 'display_name'
+ATTR_INVOICE_NO = 'invoice_no'
+ATTR_ISSUANCE_DATE = 'issuance_date'
+ATTR_DEADLINE = 'deadline'
+ATTR_AMOUNT = 'amount'
+PAID_KEY = 'paid'
+ATTR_PAID_AT = 'paid_at'
+
+
+class Registry(TypedDict, total=False):
+    '''Dijnet registry.'''
+    next_query_date: date
 
 
 class InvoiceIssuer():
@@ -108,9 +113,9 @@ class Invoice:
         provider: str,
         display_name: str,
         invoice_no: str,
-        issuance_date: datetime,
+        issuance_date: date,
         amount: int,
-        deadline: datetime
+        deadline: date
     ):
         '''
         Initialize a new instance of Invoice class.
@@ -123,11 +128,11 @@ class Invoice:
             The display name.
         invoice_no: str
             The invoice number.
-        issuance_date: datetime
+        issuance_date: date
             The issuance date.
         amount: int
             The invoice amount.
-        deadline: datetime
+        deadline: date
             The deadline.
         '''
         self._provider = provider
@@ -159,7 +164,7 @@ class Invoice:
         return self._invoice_no
 
     @property
-    def issuance_date(self) -> datetime:
+    def issuance_date(self) -> date:
         '''
         Gets the issuance date.
         '''
@@ -173,7 +178,7 @@ class Invoice:
         return self._amount
 
     @property
-    def deadline(self) -> datetime:
+    def deadline(self) -> date:
         '''
         Gets the deadline.
         '''
@@ -197,9 +202,9 @@ class Invoice:
             ATTR_PROVIDER: self._provider,
             ATTR_DISPLAY_NAME: self.display_name,
             ATTR_INVOICE_NO: self.invoice_no,
-            ATTR_ISSUANCE_DATE: self.issuance_date,
+            ATTR_ISSUANCE_DATE: self.issuance_date.isoformat(),
             ATTR_AMOUNT: self.amount,
-            ATTR_DEADLINE: self.deadline
+            ATTR_DEADLINE: self.deadline.isoformat()
         }
 
     def __str__(self):
@@ -216,10 +221,10 @@ class PaidInvoice(Invoice):
         provider: str,
         display_name: str,
         invoice_no: str,
-        issuance_date: datetime,
+        issuance_date: date,
         amount: int,
-        deadline: datetime,
-        paid_at: datetime
+        deadline: date,
+        paid_at: date
     ):
         '''
         Initialize a new instance of Invoice class.
@@ -232,20 +237,20 @@ class PaidInvoice(Invoice):
             The display name.
         invoice_no: str
             The invoice number.
-        issuance_date: datetime
+        issuance_date: date
             The issuance date.
         amount: int
             The invoice amount.
-        deadline: datetime
+        deadline: date
             The deadline.
-        paid_at: datetime
+        paid_at: date
             The date of payment.
         '''
         super().__init__(provider, display_name, invoice_no, issuance_date, amount, deadline)
         self._paid_at = paid_at
 
     @property
-    def paid_at(self) -> datetime:
+    def paid_at(self) -> date:
         '''
         Gets the date of payment.
         '''
@@ -270,12 +275,10 @@ class PaidInvoice(Invoice):
             dictionary[ATTR_PROVIDER],
             dictionary[ATTR_DISPLAY_NAME],
             dictionary[ATTR_INVOICE_NO],
-            dictionary[ATTR_ISSUANCE_DATE].date().isoformat() if isinstance(
-                dictionary[ATTR_ISSUANCE_DATE], datetime) else dictionary[ATTR_ISSUANCE_DATE],
-            dictionary[ATTR_DEADLINE].date().isoformat() if isinstance(
-                dictionary[ATTR_DEADLINE], datetime) else dictionary[ATTR_DEADLINE],
+            date.fromisoformat(dictionary[ATTR_ISSUANCE_DATE]),
             dictionary[ATTR_AMOUNT],
-            dictionary[ATTR_PAID_AT]
+            date.fromisoformat(dictionary[ATTR_DEADLINE]),
+            date.fromisoformat(dictionary[ATTR_PAID_AT])
         )
 
     def to_dictionary(self) -> Dict[str, Any]:
@@ -288,7 +291,7 @@ class PaidInvoice(Invoice):
             The dictionary contains information of paid invoice.
         '''
         res = super().to_dictionary()
-        res[ATTR_PAID_AT] = self.paid_at
+        res[ATTR_PAID_AT] = self.paid_at.isoformat()
 
         return res
 
@@ -326,7 +329,7 @@ class DijnetController:
         self._download_dir = download_dir
         self._encashment_reported_as_paid_after_deadline = \
             encashment_reported_as_paid_after_deadline
-        self._registry: Dict[str, str] = None
+        self._registry: Registry = None
         self._unpaid_invoices: List[Invoice] = []
         self._paid_invoices: List[Invoice] = []
         self._issuers: List[InvoiceIssuer] = []
@@ -348,7 +351,7 @@ class DijnetController:
             try:
                 remove('.dijnet_registry.yaml')
             except(Exception):
-                _LOGGER.warning('Failed to remove .dijnet_registry.yaml file')    
+                _LOGGER.warning('Failed to remove .dijnet_registry.yaml file')
 
     async def get_unpaid_invoices(self) -> List[Invoice]:
         '''
@@ -448,7 +451,7 @@ class DijnetController:
             if not await session.post_login(self._username, self._password):
                 return
 
-            from_date = self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE]
+            from_date = self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE].isoformat()
             to_date = datetime.now().date().isoformat()
 
             await session.get_main_page()
@@ -480,14 +483,14 @@ class DijnetController:
                             paid_at = datetime.strptime(
                                 history_row.children('td:nth-child(1)').text(),
                                 DATE_FORMAT
-                            ).date().isoformat()
+                            ).date()
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
                         else:
                             # payment info not found, but invoice paid
                             paid_at = datetime.strptime(row.children(
                                 'td:nth-child(6)').text(), DATE_FORMAT
-                            ).replace(tzinfo=None).date().isoformat()
+                            ).replace(tzinfo=None).date()
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
 
@@ -498,7 +501,7 @@ class DijnetController:
                         _LOGGER.debug(invoice_history_page.decode("iso-8859-2"))
                         paid_at = datetime.strptime(row.children(
                             'td:nth-child(6)').text(), DATE_FORMAT
-                        ).replace(tzinfo=None).date().isoformat()
+                        ).replace(tzinfo=None).date()
                         invoice = self._create_invoice_from_row(row, paid_at)
                 else:
                     invoice = self._create_invoice_from_row(row)
@@ -520,7 +523,7 @@ class DijnetController:
                         extension = href.split('?')[0].split('_')[-1]
                         name = href.split('?')[0][:-4]
                         filename = slugify(
-                            f"{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
+                            f"{invoice.issuance_date.strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
                         )+f'.{extension}'
                         download_url = f"https://www.dijnet.hu/ekonto/control/{href}"
                         _LOGGER.debug('Downloadable file found (%s).', download_url)
@@ -578,7 +581,7 @@ class DijnetController:
                     )
 
             next_query_date = (datetime.fromisoformat(to_date) -
-                               timedelta(days=31)).date().isoformat()
+                               timedelta(days=31)).date()
 
             for unpaid_invoice in unpaid_invoices:
                 if next_query_date > unpaid_invoice.issuance_date:
@@ -595,16 +598,16 @@ class DijnetController:
             self._unpaid_invoices = unpaid_invoices
             self._paid_invoices = paid_invoices
 
-    def _create_invoice_from_row(self, row: PyQuery, paid_at: datetime = None) -> Invoice:
+    def _create_invoice_from_row(self, row: PyQuery, paid_at: date = None) -> Invoice:
         provider = row.children('td:nth-child(1)').text()
         display_name = row.children('td:nth-child(2)').text()
         invoice_no = row.children('td:nth-child(3)').text()
         issuance_date = datetime.strptime(row.children(
-            'td:nth-child(4)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
+            'td:nth-child(4)').text(), DATE_FORMAT).replace(tzinfo=None).date()
         amount = float(
             re.sub(r'[^0-9\-]+', '', row.children('td:nth-child(5)').text()))
         deadline = datetime.strptime(row.children(
-            'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
+            'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
 
         invoice: Invoice = None
         if paid_at:
@@ -677,7 +680,10 @@ class DijnetController:
         try:
             _LOGGER.debug('Loading registry from "%s"', registry_filename)
             with open(registry_filename) as file:
-                registry = yaml.safe_load(file)
+                data = yaml.safe_load(file)
+                registry = {
+                    ATTR_REGISTRY_NEXT_QUERY_DATE: data[ATTR_REGISTRY_NEXT_QUERY_DATE]
+                }
 
             if isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], datetime):
                 registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[ATTR_REGISTRY_NEXT_QUERY_DATE].date().isoformat()
