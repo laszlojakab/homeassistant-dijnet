@@ -580,8 +580,8 @@ class DijnetController:
                 await file.write(yaml.dump(registry, default_flow_style=False))
 
             self._registry = registry
-            self._unpaid_invoices = unpaid_invoices
-            self._paid_invoices = paid_invoices
+            self._unpaid_invoices = sorted(unpaid_invoices, key=lambda x: x.issuance_date)
+            self._paid_invoices = sorted(paid_invoices, key=lambda x: x.issuance_date)
 
     def _create_invoice_from_row(self: Self, row: PyQuery, paid_at: date | None = None) -> Invoice:
         provider = row.children("td:nth-child(1)").text()
@@ -650,7 +650,7 @@ class DijnetController:
             async with await anyio.open_file(registry_filename) as file:
                 registry_file_content = await file.read()
                 registry = yaml.safe_load(registry_file_content)
-        
+
             paid_invoices = []
             _LOGGER.debug('Loading invoices from "%s"', paid_invoices_filename)
             async with await anyio.open_file(paid_invoices_filename) as file:
