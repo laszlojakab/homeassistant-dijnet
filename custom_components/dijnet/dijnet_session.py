@@ -1,4 +1,3 @@
-# pylint: disable=bad-continuation
 '''
 Module for a Dijnet session.
 '''
