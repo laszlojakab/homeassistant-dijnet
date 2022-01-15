@@ -592,8 +592,8 @@ class DijnetController:
                 yaml.dump(registry, file, default_flow_style=False)
 
             self._registry = registry
-            self._unpaid_invoices = unpaid_invoices
-            self._paid_invoices = paid_invoices
+            self._unpaid_invoices = sorted(unpaid_invoices, key=lambda x: x.issuance_date)
+            self._paid_invoices = sorted(paid_invoices, key=lambda x: x.issuance_date)
 
     def _create_invoice_from_row(self, row: PyQuery, paid_at: date = None) -> Invoice:
         provider = row.children('td:nth-child(1)').text()
