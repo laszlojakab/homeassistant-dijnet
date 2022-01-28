@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from os import makedirs, path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from homeassistant.helpers.typing import HomeAssistantType
@@ -430,7 +430,11 @@ class DijnetController:
             index = 0
             for row in invoices_pyquery.find('.szamla_table > tbody > tr').items():
                 invoice: Invoice = None
-                if self._is_invoice_paid(row):
+                is_paid: Optional[bool] = self._is_invoice_paid(row)
+                if is_paid is None:
+                    _LOGGER.error('Failed to determine invoice state. State column text: %s', row.children('td:nth-child(8)').text())
+                    continue
+                elif self._is_invoice_paid(row):
                     await session.get_invoice_page(index)
                     invoice_history_page = await session.get_invoice_history_page()
                     invoice_history_page_response_pyquery = pq(invoice_history_page)
@@ -576,8 +580,26 @@ class DijnetController:
 
         return invoice
 
-    def _is_invoice_paid(self, row: PyQuery) -> bool:
-        return 'Rendezetlen' not in row.children('td:nth-child(8)').text()
+    def _is_invoice_paid(self, row: PyQuery) -> Optional[bool]:
+        paid: bool = 'Rendezett' in row.children('td:nth-child(8)').text()
+        if paid:
+            return True
+
+        paid = 'Fizetve' in row.children('td:nth-child(8)').text()
+        if paid:
+            return True
+
+        not_paid: bool = 'Rendezetlen' in row.children('td:nth-child(8)').text()
+        if not_paid:
+            return False
+
+        collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
+        if collection:
+            deadline = datetime.strptime(row.children(
+                'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
+            return deadline < datetime.now().date()
+
+        return None
 
     def _initialize_registry_and_unpaid_invoices(self):
         paid_invoices = None
