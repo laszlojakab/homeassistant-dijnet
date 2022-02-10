@@ -5,7 +5,8 @@
         "data": {
           "username": "Username",
           "password": "Password",
-          "download_dir": "Download directory"
+          "download_dir": "Download directory",
+          "encashment_reported_as_paid_after_deadline": "Encashment payments reported as paid after deadline"
         },
         "description": "Set username and password. Optionally set download directory where downloaded invoices should be stored.",
         "title": "Configure Dijnet integration."
@@ -23,7 +24,8 @@
       "init": {
         "data": {
           "password": "Password",
-          "download_dir": "Download directory"
+          "download_dir": "Download directory",
+          "encashment_reported_as_paid_after_deadline": "Encashment payments reported as paid after deadline"
         },
         "description": "Set password. Optionally set download directory where downloaded invoices should be stored. To set username remove the integration and readd.",
         "title": "Reconfigure Dijnet integration."
