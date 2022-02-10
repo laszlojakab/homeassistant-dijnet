@@ -298,7 +298,13 @@ class DijnetController:
     Responsible for providing data from Dijnet website.
     '''
 
-    def __init__(self, username: str, password: str, download_dir: str = None):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        download_dir: str = None,
+        encashment_reported_as_paid_after_deadline: bool = False
+    ):
         '''
         Initialize a new instance of DijnetController class.
 
@@ -311,10 +317,15 @@ class DijnetController:
         download_dir: str
             Optional download directory. If set then the invoice
             files are downloaded to that location.
+        encashment_reported_as_paid_after_deadline: bool
+            The value indicates whether the encashment
+            should be reported as paid after deadline
         '''
         self._username = username
         self._password = password
         self._download_dir = download_dir
+        self._encashment_reported_as_paid_after_deadline = \
+            encashment_reported_as_paid_after_deadline
         self._registry: Dict[str, str] = None
         self._unpaid_invoices: List[Invoice] = []
         self._paid_invoices: List[Invoice] = []
@@ -391,7 +402,10 @@ class DijnetController:
                 issuer_id = row.children("td:nth-child(2)").text()
                 display_name = row.children("td:nth-child(3)").text()
                 providers = [
-                    raw_provider['szlaszolgnev'] for raw_provider in raw_providers if raw_provider['alias'] == display_name
+                    raw_provider['szlaszolgnev'] for
+                    raw_provider in
+                    raw_providers if
+                    raw_provider['alias'] == display_name
                 ]
                 issuer = InvoiceIssuer(issuer_id, issuer_name, display_name, providers)
                 issuers.append(issuer)
@@ -432,7 +446,8 @@ class DijnetController:
                 invoice: Invoice = None
                 is_paid: Optional[bool] = self._is_invoice_paid(row)
                 if is_paid is None:
-                    _LOGGER.error('Failed to determine invoice state. State column text: %s', row.children('td:nth-child(8)').text())
+                    _LOGGER.error('Failed to determine invoice state. State column text: %s',
+                                  row.children('td:nth-child(8)').text())
                     continue
                 elif self._is_invoice_paid(row):
                     await session.get_invoice_page(index)
@@ -593,11 +608,12 @@ class DijnetController:
         if not_paid:
             return False
 
-        collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
-        if collection:
-            deadline = datetime.strptime(row.children(
-                'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
-            return deadline < datetime.now().date()
+        if self._encashment_reported_as_paid_after_deadline:
+            collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
+            if collection:
+                deadline = datetime.strptime(row.children(
+                    'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
+                return deadline < datetime.now().date()
 
         return None
 
