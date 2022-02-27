@@ -608,12 +608,14 @@ class DijnetController:
         if not_paid:
             return False
 
-        if self._encashment_reported_as_paid_after_deadline:
-            collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
-            if collection:
+        collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
+        if collection:
+            if self._encashment_reported_as_paid_after_deadline:
                 deadline = datetime.strptime(row.children(
                     'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
                 return deadline < datetime.now().date()
+            else:
+                return False
 
         return None
 
