@@ -6,7 +6,7 @@
   "issue_tracker": "https://github.com/laszlojakab/homeassistant-dijnet/issues",
   "dependencies": [],
   "config_flow": true,
-  "version": "0.4.3-beta",
+  "version": "0.5.1-beta3",
   "codeowners": ["@laszlojakab"],
   "requirements": ["PyQuery==1.4.3"]
 }
