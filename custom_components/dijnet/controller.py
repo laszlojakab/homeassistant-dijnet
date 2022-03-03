@@ -462,8 +462,12 @@ class DijnetController:
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
                         else:
-                            # not paid?
-                            invoice = self._create_invoice_from_row(row)
+                            # payment info not found, but invoice paid
+                            paid_at = datetime.strptime(row.children(
+                                'td:nth-child(6)').text(), DATE_FORMAT
+                            ).replace(tzinfo=None).date().isoformat()
+                            invoice = self._create_invoice_from_row(row, paid_at)
+                            possible_new_paid_invoices.append(invoice)
 
                     if invoice is None:
                         _LOGGER.warning(
