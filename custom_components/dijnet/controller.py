@@ -387,7 +387,7 @@ class DijnetController:
             search_page = await session.get_invoice_search_page()
 
             providers_json = re.search(
-                r'var ropts = (.*);', search_page.decode("windows-1252")
+                r'var ropts = (.*);', search_page.decode("iso-8859-2")
             ).groups(1)[0]
 
             raw_providers: List[Any] = json.loads(providers_json)
