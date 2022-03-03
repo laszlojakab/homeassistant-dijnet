@@ -5,7 +5,8 @@
         "data": {
           "username": "Felhasználó név",
           "password": "Jelszó",
-          "download_dir": "Letöltési könyvtár"
+          "download_dir": "Letöltési könyvtár",
+          "encashment_reported_as_paid_after_deadline": "Csoportos beszedéseket fizetettnek tekint számla lejártakor"
         },
         "description": "Állítsd be a Dijnet-es felhasználónevedet és jelszavadat. Ha szeretnéd, hogy a számlák letöltésre kerüljenek adj meg egy könyvtárnevet is a letöltés helyének!",
         "title": "Dijnet integráció beállítása."
@@ -23,7 +24,8 @@
       "init": {
         "data": {
           "password": "Jelszó",
-          "download_dir": "Letöltési könyvtár"
+          "download_dir": "Letöltési könyvtár",
+          "encashment_reported_as_paid_after_deadline": "Csoportos beszedéseket fizetettnek tekint számla lejártakor"
         },
         "description": "Állítsd be a Dijnet-es jelszavadat. Ha szeretnéd, hogy a számlák letöltésre kerüljenek adj meg egy könyvtárnevet is a letöltés helyének! Ha felhasználó nevet szeretnél váltani, akkor távolítsd el az integrációt, majd add hozzá újra!",
         "title": "Dijnet integráció beállítása."

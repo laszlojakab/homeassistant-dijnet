@@ -12,7 +12,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import CONF_DOWNLOAD_DIR, DOMAIN
+from .const import CONF_DOWNLOAD_DIR, CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE, DOMAIN
 from .dijnet_session import DijnetSession
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,7 +56,11 @@ class DijnetOptionsFlowHandler(OptionsFlow):
             vol.Optional(
                 CONF_DOWNLOAD_DIR,
                 default=self.config_entry.data.get(CONF_DOWNLOAD_DIR)
-            ): str
+            ): str,
+            vol.Required(
+                CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE,
+                default=self.config_entry.data[CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE]
+            ): bool
         })
 
         if user_input is not None:
@@ -85,7 +89,7 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
     '''
     Configuration flow handler for Dijnet integration.
     '''
-    VERSION = 1
+    VERSION = 2
 
     @staticmethod
     @callback
@@ -112,12 +116,16 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema({
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD): str,
-            vol.Optional(CONF_DOWNLOAD_DIR): str
+            vol.Optional(CONF_DOWNLOAD_DIR): str,
+            vol.Required(CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE): bool
         })
 
         if user_input is not None:
             async with DijnetSession() as session:
-                if not await session.post_login(user_input[CONF_USERNAME], user_input[CONF_PASSWORD]):
+                if not await session.post_login(
+                    user_input[CONF_USERNAME],
+                    user_input[CONF_PASSWORD]
+                ):
                     return self.async_show_form(
                         step_id='user',
                         data_schema=data_schema,
@@ -130,7 +138,10 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
             data = {
                 CONF_USERNAME: user_input[CONF_USERNAME],
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
-                CONF_DOWNLOAD_DIR: user_input.get(CONF_DOWNLOAD_DIR, '')
+                CONF_DOWNLOAD_DIR: user_input.get(CONF_DOWNLOAD_DIR, ''),
+                CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE: user_input[
+                    CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE
+                ]
             }
 
             return self.async_create_entry(

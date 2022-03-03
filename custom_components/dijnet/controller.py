@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from os import makedirs, path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from homeassistant.helpers.typing import HomeAssistantType
@@ -298,7 +298,13 @@ class DijnetController:
     Responsible for providing data from Dijnet website.
     '''
 
-    def __init__(self, username: str, password: str, download_dir: str = None):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        download_dir: str = None,
+        encashment_reported_as_paid_after_deadline: bool = False
+    ):
         '''
         Initialize a new instance of DijnetController class.
 
@@ -311,10 +317,15 @@ class DijnetController:
         download_dir: str
             Optional download directory. If set then the invoice
             files are downloaded to that location.
+        encashment_reported_as_paid_after_deadline: bool
+            The value indicates whether the encashment
+            should be reported as paid after deadline
         '''
         self._username = username
         self._password = password
         self._download_dir = download_dir
+        self._encashment_reported_as_paid_after_deadline = \
+            encashment_reported_as_paid_after_deadline
         self._registry: Dict[str, str] = None
         self._unpaid_invoices: List[Invoice] = []
         self._paid_invoices: List[Invoice] = []
@@ -376,7 +387,7 @@ class DijnetController:
             search_page = await session.get_invoice_search_page()
 
             providers_json = re.search(
-                r'var ropts = (.*);', search_page.decode("windows-1252")
+                r'var ropts = (.*);', search_page.decode("iso-8859-2")
             ).groups(1)[0]
 
             raw_providers: List[Any] = json.loads(providers_json)
@@ -391,7 +402,10 @@ class DijnetController:
                 issuer_id = row.children("td:nth-child(2)").text()
                 display_name = row.children("td:nth-child(3)").text()
                 providers = [
-                    raw_provider['szlaszolgnev'] for raw_provider in raw_providers if raw_provider['alias'] == display_name
+                    raw_provider['szlaszolgnev'] for
+                    raw_provider in
+                    raw_providers if
+                    raw_provider['alias'] == display_name
                 ]
                 issuer = InvoiceIssuer(issuer_id, issuer_name, display_name, providers)
                 issuers.append(issuer)
@@ -430,7 +444,12 @@ class DijnetController:
             index = 0
             for row in invoices_pyquery.find('.szamla_table > tbody > tr').items():
                 invoice: Invoice = None
-                if self._is_invoice_paid(row):
+                is_paid: Optional[bool] = self._is_invoice_paid(row)
+                if is_paid is None:
+                    _LOGGER.error('Failed to determine invoice state. State column text: %s',
+                                  row.children('td:nth-child(8)').text())
+                    continue
+                elif self._is_invoice_paid(row):
                     await session.get_invoice_page(index)
                     invoice_history_page = await session.get_invoice_history_page()
                     invoice_history_page_response_pyquery = pq(invoice_history_page)
@@ -443,8 +462,22 @@ class DijnetController:
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
                         else:
-                            # not paid?
-                            invoice = self._create_invoice_from_row(row)
+                            # payment info not found, but invoice paid
+                            paid_at = datetime.strptime(row.children(
+                                'td:nth-child(6)').text(), DATE_FORMAT
+                            ).replace(tzinfo=None).date().isoformat()
+                            invoice = self._create_invoice_from_row(row, paid_at)
+                            possible_new_paid_invoices.append(invoice)
+
+                    if invoice is None:
+                        _LOGGER.warning(
+                            'History table rows not found. Setting paid_at value to deadline'
+                        )
+                        _LOGGER.debug(invoice_history_page.decode("iso-8859-2"))
+                        paid_at = datetime.strptime(row.children(
+                            'td:nth-child(6)').text(), DATE_FORMAT
+                        ).replace(tzinfo=None).date().isoformat()
+                        invoice = self._create_invoice_from_row(row, paid_at)
                 else:
                     invoice = self._create_invoice_from_row(row)
                     possible_new_unpaid_invoices.append(invoice)
@@ -576,8 +609,29 @@ class DijnetController:
 
         return invoice
 
-    def _is_invoice_paid(self, row: PyQuery) -> bool:
-        return 'Rendezetlen' not in row.children('td:nth-child(8)').text()
+    def _is_invoice_paid(self, row: PyQuery) -> Optional[bool]:
+        paid: bool = 'Rendezett' in row.children('td:nth-child(8)').text()
+        if paid:
+            return True
+
+        paid = 'Fizetve' in row.children('td:nth-child(8)').text()
+        if paid:
+            return True
+
+        not_paid: bool = 'Rendezetlen' in row.children('td:nth-child(8)').text()
+        if not_paid:
+            return False
+
+        collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
+        if collection:
+            if self._encashment_reported_as_paid_after_deadline:
+                deadline = datetime.strptime(row.children(
+                    'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
+                return deadline < datetime.now().date()
+            else:
+                return False
+
+        return None
 
     def _initialize_registry_and_unpaid_invoices(self):
         paid_invoices = None
