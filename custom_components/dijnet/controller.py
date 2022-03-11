@@ -610,19 +610,20 @@ class DijnetController:
         return invoice
 
     def _is_invoice_paid(self, row: PyQuery) -> Optional[bool]:
-        paid: bool = 'Rendezett' in row.children('td:nth-child(8)').text()
+        state_text = row.children('td:nth-child(8)').text()
+        paid: bool = 'Rendezett' in state_text
         if paid:
             return True
 
-        paid = 'Fizetve' in row.children('td:nth-child(8)').text()
+        paid = 'Fizetve' in state_text
         if paid:
             return True
 
-        not_paid: bool = 'Rendezetlen' in row.children('td:nth-child(8)').text()
+        not_paid: bool = 'Rendezetlen' in state_text
         if not_paid:
             return False
 
-        collection: bool = 'Csoportos beszedés' in row.children('td:nth-child(8)').text()
+        collection: bool = 'Csoportos beszedés' in state_text or 'Beszedés alatt' in state_text
         if collection:
             if self._encashment_reported_as_paid_after_deadline:
                 deadline = datetime.strptime(row.children(
