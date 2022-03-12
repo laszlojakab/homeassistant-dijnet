@@ -6,7 +6,7 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta
-from os import makedirs, path
+from os import makedirs, path, remove
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -24,8 +24,8 @@ MIN_DATE = "1990-01-01"
 DATE_FORMAT = "%Y.%m.%d"
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=3)
 MIN_TIME_BETWEEN_ISSUER_UPDATES = timedelta(days=1)
-PAID_INVOICES_FILENAME = ".dijnet_paid_invoices.yaml"
-REGISTRY_FILENAME = ".dijnet_registry.yaml"
+PAID_INVOICES_FILENAME = ".dijnet_paid_invoices_{0}.yaml"
+REGISTRY_FILENAME = ".dijnet_registry_{0}.yaml"
 ATTR_REGISTRY_NEXT_QUERY_DATE = "next_query_date"
 
 ATTR_PROVIDER = "provider"
@@ -330,6 +330,25 @@ class DijnetController:
         self._unpaid_invoices: List[Invoice] = []
         self._paid_invoices: List[Invoice] = []
         self._issuers: List[InvoiceIssuer] = []
+        self._remove_old_files()
+
+    def _remove_old_files(self):
+        """ 
+        Removes the old registry and paid invoices files,
+        because they could be corrupted if multiple accounts handled.
+        """
+        # remove old registry and paid invoice files (they might be corrupted)
+        if path.exists('.dijnet_paid_invoices.yaml'):
+            try:
+                remove('.dijnet_paid_invoices.yaml')
+            except(Exception):
+                _LOGGER.warning('Failed to remove .dijnet_paid_invoices.yaml file')
+
+        if path.exists('.dijnet_registry.yaml'):
+            try:
+                remove('.dijnet_registry.yaml')
+            except(Exception):
+                _LOGGER.warning('Failed to remove .dijnet_registry.yaml file')    
 
     async def get_unpaid_invoices(self) -> List[Invoice]:
         '''
@@ -545,7 +564,7 @@ class DijnetController:
                     unpaid_invoices.append(possible_new_unpaid_invoice)
 
             if len(new_paid_invoices) > 0:
-                with open(PAID_INVOICES_FILENAME, "a") as file:
+                with open(get_paid_invoices_filename(self._username), "a") as file:
                     file.write("\n")
                     yaml.dump(
                         list(
@@ -566,7 +585,7 @@ class DijnetController:
                 ATTR_REGISTRY_NEXT_QUERY_DATE: next_query_date
             }
 
-            with open(REGISTRY_FILENAME, "w") as file:
+            with open(get_registry_filename(self._username), "w") as file:
                 yaml.dump(registry, file, default_flow_style=False)
 
             self._registry = registry
@@ -637,14 +656,16 @@ class DijnetController:
     def _initialize_registry_and_unpaid_invoices(self):
         paid_invoices = None
         registry = None
+        paid_invoices_filename = get_paid_invoices_filename(self._username)
+        registry_filename = get_registry_filename(self._username)
         try:
-            _LOGGER.debug('Loading registry from "%s"', REGISTRY_FILENAME)
-            with open(REGISTRY_FILENAME) as file:
+            _LOGGER.debug('Loading registry from "%s"', registry_filename)
+            with open(registry_filename) as file:
                 registry = yaml.safe_load(file)
 
             paid_invoices = []
-            _LOGGER.debug('Loading invoices from "%s"', PAID_INVOICES_FILENAME)
-            with open(PAID_INVOICES_FILENAME) as file:
+            _LOGGER.debug('Loading invoices from "%s"', paid_invoices_filename)
+            with open(paid_invoices_filename) as file:
                 data = yaml.safe_load(file)
                 for paid_invoice_dict in data:
                     try:
@@ -658,7 +679,7 @@ class DijnetController:
                             exception
                         )
         except FileNotFoundError:
-            _LOGGER.debug('"%s" or "%s" not found.', PAID_INVOICES_FILENAME, REGISTRY_FILENAME)
+            _LOGGER.debug('"%s" or "%s" not found.', paid_invoices_filename, registry_filename)
             paid_invoices = []
             registry = {
                 ATTR_REGISTRY_NEXT_QUERY_DATE: MIN_DATE
@@ -722,3 +743,11 @@ def is_controller_exists(hass: HomeAssistantType, user_name: str) -> bool:
         username in Home Assistant data container.
     '''
     return user_name in hass.data[DOMAIN][DATA_CONTROLLER]
+
+
+def get_paid_invoices_filename(username: str) -> str:
+    return PAID_INVOICES_FILENAME.format(slugify(username))
+
+
+def get_registry_filename(username: str) -> str:
+    return REGISTRY_FILENAME.format(slugify(username))
