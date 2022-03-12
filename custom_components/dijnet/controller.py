@@ -400,12 +400,12 @@ class DijnetController:
             for row in invoice_providers_response_pquery.find(".szamla_table > tbody > tr").items():
                 issuer_name = row.children("td:nth-child(1)").text()
                 issuer_id = row.children("td:nth-child(2)").text()
-                display_name = row.children("td:nth-child(3)").text()
+                display_name = row.children("td:nth-child(3)").text() or issuer_id
                 providers = [
                     raw_provider['szlaszolgnev'] for
                     raw_provider in
                     raw_providers if
-                    raw_provider['alias'] == display_name
+                    (raw_provider['alias'] or raw_provider['aliasnev']) == display_name
                 ]
                 issuer = InvoiceIssuer(issuer_id, issuer_name, display_name, providers)
                 issuers.append(issuer)
