@@ -642,6 +642,10 @@ class DijnetController:
         if not_paid:
             return False
 
+        sent_to_mobile: bool = 'Mobiltelefonra küldve' in state_text
+        if sent_to_mobile:
+            return False
+
         collection: bool = 'Csoportos beszedés' in state_text or 'Beszedés alatt' in state_text
         if collection:
             if self._encashment_reported_as_paid_after_deadline:
