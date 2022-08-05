@@ -646,6 +646,10 @@ class DijnetController:
         if sent_to_mobile:
             return False
 
+        sent_to_internet_banking: bool = 'Internetbanknak átadva' in state_text
+        if sent_to_internet_banking:
+            return False
+
         collection: bool = 'Csoportos beszedés' in state_text or 'Beszedés alatt' in state_text
         if collection:
             if self._encashment_reported_as_paid_after_deadline:
