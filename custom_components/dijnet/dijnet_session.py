@@ -11,7 +11,7 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
-DATE_FORMAT = "%Y.%m.%d"
+DATE_FORMAT = "%Y-%m-%d"
 ROOT_URL = 'https://www.dijnet.hu'
 
 
@@ -172,7 +172,7 @@ class DijnetSession:
         Parameters
         ----------
         provider_name: str
-            The name of the prodiver.
+            The name of the provider.
         reg_id: str
             The reg id.
         from_date: str

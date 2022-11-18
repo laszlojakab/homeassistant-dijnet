@@ -416,7 +416,7 @@ class DijnetController:
             invoice_providers_response = await session.get_registered_providers_page()
 
             invoice_providers_response_pquery = pq(invoice_providers_response)
-            for row in invoice_providers_response_pquery.find(".szamla_table > tbody > tr").items():
+            for row in invoice_providers_response_pquery.find(".table > tbody > tr").items():
                 issuer_name = row.children("td:nth-child(1)").text()
                 issuer_id = row.children("td:nth-child(2)").text()
                 display_name = row.children("td:nth-child(3)").text() or issuer_id
@@ -461,7 +461,7 @@ class DijnetController:
             possible_new_paid_invoices: List[PaidInvoice] = []
             possible_new_unpaid_invoices: List[Invoice] = []
             index = 0
-            for row in invoices_pyquery.find('.szamla_table > tbody > tr').items():
+            for row in invoices_pyquery.find('.table > tbody > tr').items():
                 invoice: Invoice = None
                 is_paid: Optional[bool] = self._is_invoice_paid(row)
                 if is_paid is None:
@@ -472,7 +472,7 @@ class DijnetController:
                     await session.get_invoice_page(index)
                     invoice_history_page = await session.get_invoice_history_page()
                     invoice_history_page_response_pyquery = pq(invoice_history_page)
-                    for history_row in invoice_history_page_response_pyquery.find('.szamla_table.xt_lower tr').items():
+                    for history_row in invoice_history_page_response_pyquery.find('.table tr').items():
                         if history_row.children('td:nth-child(4)').text() == '**Sikeres fizetés**':
                             paid_at = datetime.strptime(
                                 history_row.children('td:nth-child(1)').text(),
@@ -630,6 +630,11 @@ class DijnetController:
 
     def _is_invoice_paid(self, row: PyQuery) -> Optional[bool]:
         state_text = row.children('td:nth-child(8)').text()
+
+        go_to_pay: bool = 'Tovább a fizetéshez' in state_text
+        if go_to_pay:
+            return False
+
         paid: bool = 'Rendezett' in state_text
         if paid:
             return True
