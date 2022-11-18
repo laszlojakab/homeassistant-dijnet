@@ -5,7 +5,7 @@ Module for Dijnet controller.
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from os import makedirs, path, remove
 from typing import Any, Dict, List, Optional
 
@@ -675,6 +675,11 @@ class DijnetController:
             _LOGGER.debug('Loading registry from "%s"', registry_filename)
             with open(registry_filename) as file:
                 registry = yaml.safe_load(file)
+
+            if isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], datetime):
+                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[ATTR_REGISTRY_NEXT_QUERY_DATE].date().isoformat()
+            elif isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], date):
+                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[ATTR_REGISTRY_NEXT_QUERY_DATE].isoformat()
 
             paid_invoices = []
             _LOGGER.debug('Loading invoices from "%s"', paid_invoices_filename)
