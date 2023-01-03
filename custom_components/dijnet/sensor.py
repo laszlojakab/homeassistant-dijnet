@@ -3,11 +3,11 @@ import logging
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.components.sensor import (PLATFORM_SCHEMA, SensorEntity,
+from homeassistant.components.sensor import (PLATFORM_SCHEMA,
+                                             SensorDeviceClass, SensorEntity,
                                              SensorEntityDescription)
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME,
-                                 DEVICE_CLASS_MONETARY)
+from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME)
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -101,7 +101,7 @@ class InvoiceAmountSensor(SensorEntity):
         self._provider = provider
         self.entity_description = SensorEntityDescription(
             key='invoice_amount',
-            device_class=DEVICE_CLASS_MONETARY,
+            device_class=SensorDeviceClass.MONETARY,
             native_unit_of_measurement='Ft',
             name=f'Dijnet - {provider} fizetendő összeg'
         )
