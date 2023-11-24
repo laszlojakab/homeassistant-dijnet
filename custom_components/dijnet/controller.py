@@ -512,7 +512,7 @@ class DijnetController:
                     unpaid_invoice_download_page_response_pyquery = PyQuery(
                         invoice_download_page)
 
-                    for downloadable_link in unpaid_invoice_download_page_response_pyquery.find('#tab_szamla_letolt a:not([href^=http])').items():
+                    for downloadable_link in unpaid_invoice_download_page_response_pyquery.find('#content_bs a[href*=szamla_pdf], a[href*=szamla_xml]').items():
                         href = downloadable_link.attr('href')
                         extension = href.split('?')[0].split('_')[-1]
                         name = href.split('?')[0][:-4]
