@@ -163,6 +163,7 @@ class DijnetSession:
         self,
         provider_name: str,
         reg_id: str,
+        vfw_token: str,
         from_date: str,
         to_date: str
     ):
@@ -175,6 +176,8 @@ class DijnetSession:
             The name of the provider.
         reg_id: str
             The reg id.
+        vfw_token:
+            The vfw_token hidden input parameter.
         from_date: str
             The search date interval start as date iso string.
         to_date: str
@@ -191,6 +194,7 @@ class DijnetSession:
             data={
                 'vfw_form': 'szamla_search_submit',
                 'vfw_coll': 'szamla_search_params',
+                'vfw_token': vfw_token,
                 'szlaszolgnev': provider_name,
                 'regszolgid': reg_id,
                 'datumtol': datetime.fromisoformat(from_date).strftime(DATE_FORMAT),
