@@ -453,9 +453,12 @@ class DijnetController:
 
             await session.get_main_page()
 
-            await session.get_invoice_search_page()
+            search_page = await session.get_invoice_search_page()
+            search_page_pyquery = pq(search_page)            
+            
+            vfw_token = next(search_page_pyquery.find('form[action=szamla_search_submit] input[name=vfw_token]').items()).val()
 
-            search_result = await session.post_search_invoice('', '', from_date, to_date)
+            search_result = await session.post_search_invoice('', '', vfw_token, from_date, to_date)
 
             invoices_pyquery = pq(search_result)
             possible_new_paid_invoices: List[PaidInvoice] = []
