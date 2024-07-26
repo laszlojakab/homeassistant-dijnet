@@ -1,6 +1,7 @@
 """Support for Dijnet."""
 
 import logging
+from typing import Self
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -34,15 +35,15 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 async def async_setup_platform(
     hass: HomeAssistantType,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType = None,
+    async_add_entities: AddEntitiesCallback,  # noqa: ARG001
+    discovery_info: DiscoveryInfoType = None,  # noqa: ARG001
 ) -> None:
     """Import yaml config and initiates config flow for Dijnet integration."""
-
     # Check if entry config exists and skips import if it does.
     if hass.config_entries.async_entries(DOMAIN):
         _LOGGER.warning(
-            "Setting up Dijnet integration from yaml is deprecated. Please remove configuration from yaml."
+            "Setting up Dijnet integration from yaml is deprecated."
+            "Please remove configuration from yaml."
         )
         return
 
@@ -61,19 +62,16 @@ async def async_setup_entry(
     """
     Setup of Dijnet sensors for the specified config_entry.
 
-    Parameters
-    ----------
-    hass: homeassistant.helpers.typing.HomeAssistantType
+    Args:
+      hass:
         The Home Assistant instance.
-    config_entry: homeassistant.helpers.typing.ConfigEntry
+      config_entry:
         The config entry which is used to create sensors.
-    async_add_entities: homeassistant.helpers.entity_platform.AddEntitiesCallback
+      async_add_entities:
         The callback which can be used to add new entities to Home Assistant.
 
-    Returns
-    -------
-    bool
-        The value indicates whether the setup succeeded.
+    Returns:
+      The value indicates whether the setup succeeded.
     """
     _LOGGER.info("Setting up Dijnet sensors.")
 
@@ -95,17 +93,35 @@ async def async_setup_entry(
 
 
 class InvoiceAmountSensor(SensorEntity):
+    """Represents an invoice amount sensor."""
+
     def __init__(
-        self,
+        self: Self,
         controller: DijnetController,
         config_entry_id: str,
         invoice_issuer: InvoiceIssuer,
         provider: str,
-    ):
+    ) -> None:
+        """
+        Initializes a new instance of `InvoiceAmountSensor` class.
+
+        Args:
+          controller:
+            The Dijnet controller.
+          config_entry_id:
+            The unique id of the config entry.
+          invoice_issuer:
+            The invoice issuer.
+          provider:
+            The invoice provider.
+        """
         self._controller = controller
         self._invoice_issuer = invoice_issuer
         self._state = None
-        self._attr_unique_id = f"{config_entry_id}_{invoice_issuer.issuer}_{invoice_issuer.issuer_id}_{provider}_amount"
+        self._attr_unique_id = (
+            f"{config_entry_id}_{invoice_issuer.issuer}_"
+            f"{invoice_issuer.issuer_id}_{provider}_amount"
+        )
         self._provider = provider
         self.entity_description = SensorEntityDescription(
             key="invoice_amount",
@@ -115,7 +131,8 @@ class InvoiceAmountSensor(SensorEntity):
         )
 
     @property
-    def device_info(self) -> DeviceInfo:
+    def device_info(self: Self) -> DeviceInfo:
+        """Returns the device information."""
         return DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             configuration_url="https://dijnet.hu/",
@@ -126,7 +143,8 @@ class InvoiceAmountSensor(SensorEntity):
             name=self._invoice_issuer.display_name,
         )
 
-    async def async_update(self):
+    async def async_update(self: Self) -> None:
+        """Called when the entity should update its state."""
         invoices = [
             invoice
             for invoice in await self._controller.get_unpaid_invoices()

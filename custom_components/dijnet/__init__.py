@@ -16,24 +16,20 @@ from .controller import DijnetController, is_controller_exists, set_controller
 
 _LOGGER = logging.getLogger(__name__)
 
-# pylint: disable=unused-argument
 
-
-async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:  # noqa: ARG001
     """
-    Set up the Dijnet component.
+    Sets up the Dijnet component.
 
-    Parameters
-    ----------
-    hass: homeassistant.helpers.typing.HomeAssistantType
+    Args:
+      hass:
         The Home Assistant instance.
-    config: homeassistant.helpers.typing.ConfigType
+      config:
         The configuration.
 
-    Returns
-    -------
-    bool
-        The value indicates whether the setup succeeded.
+    Returns:
+      The value indicates whether the setup succeeded.
+
     """
     hass.data[DOMAIN] = {DATA_CONTROLLER: {}}
     return True
@@ -41,21 +37,18 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry) -> bool:
     """
-    Initialize the sensors based on the config entry.
+    Initializes the sensors based on the config entry.
 
-    Parameters
-    ----------
-    hass: homeassistant.helpers.typing.HomeAssistantType
+    Args:
+      hass:
         The Home Assistant instance.
-    config_entry: homeassistant.config_entries.ConfigEntry
+      config_entry:
         The config entry which contains information gathered by the config flow.
 
-    Returns
-    -------
-    bool
-        The value indicates whether the setup succeeded.
-    """
+    Returns:
+      The value indicates whether the setup succeeded.
 
+    """
     if not is_controller_exists(hass, config_entry.data[CONF_USERNAME]):
         set_controller(
             hass,
@@ -73,8 +66,19 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry) 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
-    """Migrate old entry."""
+async def async_migrate_entry(hass: HomeAssistantType, config_entry: ConfigEntry) -> bool:
+    """
+    Migrates old entry.
+
+    Args:
+      hass:
+        The Home Assistant instance.
+      config_entry:
+        The config entry to migrate.
+
+    Returns:
+      The value indicates whether the migration succeeded.
+    """
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1:
