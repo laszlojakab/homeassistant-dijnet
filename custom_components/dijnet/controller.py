@@ -1,7 +1,8 @@
 # pylint: disable=bad-continuation
-'''
+"""
 Module for Dijnet controller.
-'''
+"""
+
 import json
 import logging
 import re
@@ -38,13 +39,13 @@ PAID_KEY = "paid"
 ATTR_PAID_AT = "paid_at"
 
 
-class InvoiceIssuer():
-    '''
+class InvoiceIssuer:
+    """
     Represents an invoice issuer.
-    '''
+    """
 
     def __init__(self, issuer_id: str, issuer_name: str, display_name: str, providers: List[str]):
-        '''
+        """
         Initialize a new instance of InvoiceIssuer class.
 
         Parameters
@@ -57,51 +58,51 @@ class InvoiceIssuer():
             The display name of the registration.
         providers: str
             The list of providers belongs to issuer.
-        '''
+        """
         self._issuer_id = issuer_id
         self._issuer_name = issuer_name
         self._display_name = display_name
         self._providers = providers
 
     def __str__(self) -> str:
-        '''
+        """
         Returns the string representation of the class.
-        '''
-        return f'{self.issuer} - {self.issuer_id} - {self.display_name} - {self.providers}'
+        """
+        return f"{self.issuer} - {self.issuer_id} - {self.display_name} - {self.providers}"
 
     @property
     def issuer_id(self) -> str:
-        '''
+        """
         Gets the invoice issuer id.
-        '''
+        """
         return self._issuer_id
 
     @property
     def display_name(self) -> str:
-        '''
+        """
         Gets the dislay name.
-        '''
+        """
         return self._display_name
 
     @property
     def issuer(self) -> str:
-        '''
+        """
         Gets the invoice issuer name.
-        '''
+        """
         return self._issuer_name
 
     @property
     def providers(self) -> List[str]:
-        '''
+        """
         Gets the list of providers belongs to the issuer
-        '''
+        """
         return self._providers
 
 
 class Invoice:
-    '''
+    """
     Represents an invoice.
-    '''
+    """
 
     def __init__(
         self,
@@ -110,9 +111,9 @@ class Invoice:
         invoice_no: str,
         issuance_date: datetime,
         amount: int,
-        deadline: datetime
+        deadline: datetime,
     ):
-        '''
+        """
         Initialize a new instance of Invoice class.
 
         Parameters
@@ -129,7 +130,7 @@ class Invoice:
             The invoice amount.
         deadline: datetime
             The deadline.
-        '''
+        """
         self._provider = provider
         self._display_name = display_name
         self._invoice_no = invoice_no
@@ -139,67 +140,69 @@ class Invoice:
 
     @property
     def provider(self) -> str:
-        '''
+        """
         Gets the provider.
-        '''
+        """
         return self._provider
 
     @property
     def display_name(self) -> str:
-        '''
+        """
         Gets the display name.
-        '''
+        """
         return self._display_name
 
     @property
     def invoice_no(self) -> str:
-        '''
+        """
         Gets the invoice number.
-        '''
+        """
         return self._invoice_no
 
     @property
     def issuance_date(self) -> datetime:
-        '''
+        """
         Gets the issuance date.
-        '''
+        """
         return self._issuance_date
 
     @property
     def amount(self) -> int:
-        '''
+        """
         Gets the issuance date.
-        '''
+        """
         return self._amount
 
     @property
     def deadline(self) -> datetime:
-        '''
+        """
         Gets the deadline.
-        '''
+        """
         return self._deadline
 
     def __eq__(self, obj):
-        return isinstance(obj, Invoice) and \
-            obj.provider == self.provider and \
-            obj.invoice_no == self.invoice_no
+        return (
+            isinstance(obj, Invoice)
+            and obj.provider == self.provider
+            and obj.invoice_no == self.invoice_no
+        )
 
     def to_dictionary(self) -> Dict[str, Any]:
-        '''
+        """
         Converts the paid invoice to a dictionary.
 
         Returns
         -------
         Dict[str, Any]
             The dictionary contains information of paid invoice.
-        '''
+        """
         return {
             ATTR_PROVIDER: self._provider,
             ATTR_DISPLAY_NAME: self.display_name,
             ATTR_INVOICE_NO: self.invoice_no,
             ATTR_ISSUANCE_DATE: self.issuance_date,
             ATTR_AMOUNT: self.amount,
-            ATTR_DEADLINE: self.deadline
+            ATTR_DEADLINE: self.deadline,
         }
 
     def __str__(self):
@@ -207,9 +210,9 @@ class Invoice:
 
 
 class PaidInvoice(Invoice):
-    '''
+    """
     Represents a paid invoice.
-    '''
+    """
 
     def __init__(
         self,
@@ -219,9 +222,9 @@ class PaidInvoice(Invoice):
         issuance_date: datetime,
         amount: int,
         deadline: datetime,
-        paid_at: datetime
+        paid_at: datetime,
     ):
-        '''
+        """
         Initialize a new instance of Invoice class.
 
         Parameters
@@ -240,20 +243,20 @@ class PaidInvoice(Invoice):
             The deadline.
         paid_at: datetime
             The date of payment.
-        '''
+        """
         super().__init__(provider, display_name, invoice_no, issuance_date, amount, deadline)
         self._paid_at = paid_at
 
     @property
     def paid_at(self) -> datetime:
-        '''
+        """
         Gets the date of payment.
-        '''
+        """
         return self._paid_at
 
     @staticmethod
     def from_dictionary(dictionary: Dict[str, Any]):
-        '''
+        """
         Converts a dictionary to PaidInvoice instance.
 
         Parameters
@@ -265,28 +268,30 @@ class PaidInvoice(Invoice):
         -------
         PaidInvoice
             The converted paid invoice.
-        '''
+        """
         return PaidInvoice(
             dictionary[ATTR_PROVIDER],
             dictionary[ATTR_DISPLAY_NAME],
             dictionary[ATTR_INVOICE_NO],
-            dictionary[ATTR_ISSUANCE_DATE].date().isoformat() if isinstance(
-                dictionary[ATTR_ISSUANCE_DATE], datetime) else dictionary[ATTR_ISSUANCE_DATE],
-            dictionary[ATTR_DEADLINE].date().isoformat() if isinstance(
-                dictionary[ATTR_DEADLINE], datetime) else dictionary[ATTR_DEADLINE],
+            dictionary[ATTR_ISSUANCE_DATE].date().isoformat()
+            if isinstance(dictionary[ATTR_ISSUANCE_DATE], datetime)
+            else dictionary[ATTR_ISSUANCE_DATE],
+            dictionary[ATTR_DEADLINE].date().isoformat()
+            if isinstance(dictionary[ATTR_DEADLINE], datetime)
+            else dictionary[ATTR_DEADLINE],
             dictionary[ATTR_AMOUNT],
-            dictionary[ATTR_PAID_AT]
+            dictionary[ATTR_PAID_AT],
         )
 
     def to_dictionary(self) -> Dict[str, Any]:
-        '''
+        """
         Converts the paid invoice to a dictionary.
 
         Returns
         -------
         Dict[str, Any]
             The dictionary contains information of paid invoice.
-        '''
+        """
         res = super().to_dictionary()
         res[ATTR_PAID_AT] = self.paid_at
 
@@ -294,18 +299,18 @@ class PaidInvoice(Invoice):
 
 
 class DijnetController:
-    '''
+    """
     Responsible for providing data from Dijnet website.
-    '''
+    """
 
     def __init__(
         self,
         username: str,
         password: str,
         download_dir: str = None,
-        encashment_reported_as_paid_after_deadline: bool = False
+        encashment_reported_as_paid_after_deadline: bool = False,
     ):
-        '''
+        """
         Initialize a new instance of DijnetController class.
 
         Parameters
@@ -320,12 +325,13 @@ class DijnetController:
         encashment_reported_as_paid_after_deadline: bool
             The value indicates whether the encashment
             should be reported as paid after deadline
-        '''
+        """
         self._username = username
         self._password = password
         self._download_dir = download_dir
-        self._encashment_reported_as_paid_after_deadline = \
+        self._encashment_reported_as_paid_after_deadline = (
             encashment_reported_as_paid_after_deadline
+        )
         self._registry: Dict[str, str] = None
         self._unpaid_invoices: List[Invoice] = []
         self._paid_invoices: List[Invoice] = []
@@ -333,67 +339,67 @@ class DijnetController:
         self._remove_old_files()
 
     def _remove_old_files(self):
-        """ 
+        """
         Removes the old registry and paid invoices files,
         because they could be corrupted if multiple accounts handled.
         """
         # remove old registry and paid invoice files (they might be corrupted)
-        if path.exists('.dijnet_paid_invoices.yaml'):
+        if path.exists(".dijnet_paid_invoices.yaml"):
             try:
-                remove('.dijnet_paid_invoices.yaml')
-            except(Exception):
-                _LOGGER.warning('Failed to remove .dijnet_paid_invoices.yaml file')
+                remove(".dijnet_paid_invoices.yaml")
+            except Exception:
+                _LOGGER.warning("Failed to remove .dijnet_paid_invoices.yaml file")
 
-        if path.exists('.dijnet_registry.yaml'):
+        if path.exists(".dijnet_registry.yaml"):
             try:
-                remove('.dijnet_registry.yaml')
-            except(Exception):
-                _LOGGER.warning('Failed to remove .dijnet_registry.yaml file')    
+                remove(".dijnet_registry.yaml")
+            except Exception:
+                _LOGGER.warning("Failed to remove .dijnet_registry.yaml file")
 
     async def get_unpaid_invoices(self) -> List[Invoice]:
-        '''
+        """
         Gets the list of unpaid invoices.
 
         Returns
         -------
         List[Invoice]
             The list of unpaid invoices.
-        '''
+        """
         await self.update_invoices()
         return self._unpaid_invoices
 
     async def get_paid_invoices(self) -> List[Invoice]:
-        '''
+        """
         Gets the list of paid invoices.
 
         Returns
         -------
         List[Invoice]
             The list of paid invoices.
-        '''
+        """
         await self.update_invoices()
         return self._paid_invoices
 
     async def get_issuers(self) -> List[InvoiceIssuer]:
-        '''
+        """
         Gets the list of registered invoice issuers.
 
         Returns
         -------
         List[InvoiceIssuer]
             The list of registered invoice issuers.
-        '''
+        """
         await self.update_registered_issuers()
         return self._issuers
 
     @Throttle(MIN_TIME_BETWEEN_ISSUER_UPDATES)
     async def update_registered_issuers(self):
-        '''
+        """
         Updates the registered issuers list.
-        '''
+        """
         issuers: List[InvoiceIssuer] = []
 
-        _LOGGER.debug('Updating issuers.')
+        _LOGGER.debug("Updating issuers.")
 
         async with DijnetSession() as session:
             await session.get_root_page()
@@ -406,7 +412,7 @@ class DijnetController:
             search_page = await session.get_invoice_search_page()
 
             providers_json = re.search(
-                r'var ropts = (.*);', search_page.decode("iso-8859-2")
+                r"var ropts = (.*);", search_page.decode("iso-8859-2")
             ).groups(1)[0]
 
             raw_providers: List[Any] = json.loads(providers_json)
@@ -415,16 +421,17 @@ class DijnetController:
 
             invoice_providers_response = await session.get_registered_providers_page()
 
-            invoice_providers_response_pquery = pq(invoice_providers_response.decode("iso-8859-2").encode('utf-8'))
+            invoice_providers_response_pquery = pq(
+                invoice_providers_response.decode("iso-8859-2").encode("utf-8")
+            )
             for row in invoice_providers_response_pquery.find(".table > tbody > tr").items():
                 issuer_name = row.children("td:nth-child(1)").text()
                 issuer_id = row.children("td:nth-child(2)").text()
                 display_name = row.children("td:nth-child(3)").text() or issuer_id
                 providers = [
-                    raw_provider['szlaszolgnev'] for
-                    raw_provider in
-                    raw_providers if
-                    (raw_provider['alias'] or raw_provider['aliasnev']) == display_name
+                    raw_provider["szlaszolgnev"]
+                    for raw_provider in raw_providers
+                    if (raw_provider["alias"] or raw_provider["aliasnev"]) == display_name
                 ]
                 issuer = InvoiceIssuer(issuer_id, issuer_name, display_name, providers)
                 issuers.append(issuer)
@@ -434,9 +441,9 @@ class DijnetController:
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def update_invoices(self):
-        '''
+        """
         Updates the invoice lists.
-        '''
+        """
         _LOGGER.debug("Updating invoices.")
 
         if self._registry is None:
@@ -454,57 +461,84 @@ class DijnetController:
             await session.get_main_page()
 
             search_page = await session.get_invoice_search_page()
-            search_page_pyquery = pq(search_page.decode("iso-8859-2").encode('utf-8'))            
-            
-            vfw_token = next(search_page_pyquery.find('form[action=szamla_search_submit] input[name=vfw_token]').items()).val()
+            search_page_pyquery = pq(search_page.decode("iso-8859-2").encode("utf-8"))
 
-            search_result = await session.post_search_invoice('', '', vfw_token, from_date, to_date)
+            vfw_token = next(
+                search_page_pyquery.find(
+                    "form[action=szamla_search_submit] input[name=vfw_token]"
+                ).items()
+            ).val()
 
-            invoices_pyquery = pq(search_result.decode("iso-8859-2").encode('utf-8'))
+            vfw_token = next(
+                search_page_pyquery.find(
+                    "form[action=szamla_search_submit] input[name=vfw_token]"
+                ).items()
+            ).val()
+
+            search_result = await session.post_search_invoice("", "", vfw_token, from_date, to_date)
+
+            invoices_pyquery = pq(search_result.decode("iso-8859-2").encode("utf-8"))
             possible_new_paid_invoices: List[PaidInvoice] = []
             possible_new_unpaid_invoices: List[Invoice] = []
             index = 0
-            for row in invoices_pyquery.find('.table > tbody > tr').items():
+            for row in invoices_pyquery.find(".table > tbody > tr").items():
                 invoice: Invoice = None
                 is_paid: Optional[bool] = self._is_invoice_paid(row)
                 if is_paid is None:
-                    _LOGGER.error('Failed to determine invoice state. State column text: %s',
-                                  row.children('td:nth-child(8)').text())
+                    _LOGGER.error(
+                        "Failed to determine invoice state. State column text: %s",
+                        row.children("td:nth-child(8)").text(),
+                    )
                     continue
                 elif self._is_invoice_paid(row):
                     await session.get_invoice_page(index)
                     invoice_history_page = await session.get_invoice_history_page()
-                    invoice_history_page_response_pyquery = pq(invoice_history_page.decode("iso-8859-2").encode('utf-8'))
-                    for history_row in invoice_history_page_response_pyquery.find('.table tr').items():
-                        if history_row.children('td:nth-child(4)').text() == '**Sikeres fizetés**':
-                            paid_at = datetime.strptime(
-                                history_row.children('td:nth-child(1)').text(),
-                                DATE_FORMAT
-                            ).date().isoformat()
+                    invoice_history_page_response_pyquery = pq(
+                        invoice_history_page.decode("iso-8859-2").encode("utf-8")
+                    )
+                    for history_row in invoice_history_page_response_pyquery.find(
+                        ".table tr"
+                    ).items():
+                        if history_row.children("td:nth-child(4)").text() == "**Sikeres fizetés**":
+                            paid_at = (
+                                datetime.strptime(
+                                    history_row.children("td:nth-child(1)").text(), DATE_FORMAT
+                                )
+                                .date()
+                                .isoformat()
+                            )
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
                         else:
                             # payment info not found, but invoice paid
-                            paid_at = datetime.strptime(row.children(
-                                'td:nth-child(6)').text(), DATE_FORMAT
-                            ).replace(tzinfo=None).date().isoformat()
+                            paid_at = (
+                                datetime.strptime(
+                                    row.children("td:nth-child(6)").text(), DATE_FORMAT
+                                )
+                                .replace(tzinfo=None)
+                                .date()
+                                .isoformat()
+                            )
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
 
                     if invoice is None:
                         _LOGGER.warning(
-                            'History table rows not found. Setting paid_at value to deadline'
+                            "History table rows not found. Setting paid_at value to deadline"
                         )
                         _LOGGER.debug(invoice_history_page.decode("iso-8859-2"))
-                        paid_at = datetime.strptime(row.children(
-                            'td:nth-child(6)').text(), DATE_FORMAT
-                        ).replace(tzinfo=None).date().isoformat()
+                        paid_at = (
+                            datetime.strptime(row.children("td:nth-child(6)").text(), DATE_FORMAT)
+                            .replace(tzinfo=None)
+                            .date()
+                            .isoformat()
+                        )
                         invoice = self._create_invoice_from_row(row, paid_at)
                 else:
                     invoice = self._create_invoice_from_row(row)
                     possible_new_unpaid_invoices.append(invoice)
 
-                if self._download_dir != '':
+                if self._download_dir != "":
                     directory = path.join(self._download_dir, slugify(invoice.provider))
                     makedirs(directory, exist_ok=True)
                     if invoice is not PaidInvoice:
@@ -512,25 +546,29 @@ class DijnetController:
 
                     invoice_download_page = await session.get_invoice_download_page()
 
-                    unpaid_invoice_download_page_response_pyquery = PyQuery(
-                        invoice_download_page)
+                    unpaid_invoice_download_page_response_pyquery = PyQuery(invoice_download_page)
 
-                    for downloadable_link in unpaid_invoice_download_page_response_pyquery.find('#content_bs a[href*=szamla_pdf], a[href*=szamla_xml]').items():
-                        href = downloadable_link.attr('href')
-                        extension = href.split('?')[0].split('_')[-1]
-                        name = href.split('?')[0][:-4]
-                        filename = slugify(
-                            f"{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
-                        )+f'.{extension}'
+                    for downloadable_link in unpaid_invoice_download_page_response_pyquery.find(
+                        "#content_bs a[href*=szamla_pdf], a[href*=szamla_xml]"
+                    ).items():
+                        href = downloadable_link.attr("href")
+                        extension = href.split("?")[0].split("_")[-1]
+                        name = href.split("?")[0][:-4]
+                        filename = (
+                            slugify(
+                                f"{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
+                            )
+                            + f".{extension}"
+                        )
                         download_url = f"https://www.dijnet.hu/ekonto/control/{href}"
-                        _LOGGER.debug('Downloadable file found (%s).', download_url)
+                        _LOGGER.debug("Downloadable file found (%s).", download_url)
 
                         full_path = path.join(directory, filename)
 
                         if path.exists(full_path):
-                            _LOGGER.debug('File already downloaded (%s)', full_path)
+                            _LOGGER.debug("File already downloaded (%s)", full_path)
                         else:
-                            _LOGGER.info('Downloading file (%s -> %s).', download_url, full_path)
+                            _LOGGER.info("Downloading file (%s -> %s).", download_url, full_path)
                             file_content = await session.download(download_url)
                             with open(full_path, "wb") as file:
                                 file.write(file_content)
@@ -570,23 +608,20 @@ class DijnetController:
                 with open(get_paid_invoices_filename(self._username), "a") as file:
                     file.write("\n")
                     yaml.dump(
-                        list(
-                            map(lambda x: x.to_dictionary(), new_paid_invoices)
-                        ),
+                        list(map(lambda x: x.to_dictionary(), new_paid_invoices)),
                         file,
-                        default_flow_style=False
+                        default_flow_style=False,
                     )
 
-            next_query_date = (datetime.fromisoformat(to_date) -
-                               timedelta(days=31)).date().isoformat()
+            next_query_date = (
+                (datetime.fromisoformat(to_date) - timedelta(days=31)).date().isoformat()
+            )
 
             for unpaid_invoice in unpaid_invoices:
                 if next_query_date > unpaid_invoice.issuance_date:
                     next_query_date = unpaid_invoice.issuance_date
 
-            registry = {
-                ATTR_REGISTRY_NEXT_QUERY_DATE: next_query_date
-            }
+            registry = {ATTR_REGISTRY_NEXT_QUERY_DATE: next_query_date}
 
             with open(get_registry_filename(self._username), "w") as file:
                 yaml.dump(registry, file, default_flow_style=False)
@@ -596,73 +631,70 @@ class DijnetController:
             self._paid_invoices = paid_invoices
 
     def _create_invoice_from_row(self, row: PyQuery, paid_at: datetime = None) -> Invoice:
-        provider = row.children('td:nth-child(1)').text()
-        display_name = row.children('td:nth-child(2)').text()
-        invoice_no = row.children('td:nth-child(3)').text()
-        issuance_date = datetime.strptime(row.children(
-            'td:nth-child(4)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
-        amount = float(
-            re.sub(r'[^0-9\-]+', '', row.children('td:nth-child(7)').text()))
-        deadline = datetime.strptime(row.children(
-            'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
+        provider = row.children("td:nth-child(1)").text()
+        display_name = row.children("td:nth-child(2)").text()
+        invoice_no = row.children("td:nth-child(3)").text()
+        issuance_date = (
+            datetime.strptime(row.children("td:nth-child(4)").text(), DATE_FORMAT)
+            .replace(tzinfo=None)
+            .date()
+            .isoformat()
+        )
+        amount = float(re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
+        deadline = (
+            datetime.strptime(row.children("td:nth-child(6)").text(), DATE_FORMAT)
+            .replace(tzinfo=None)
+            .date()
+            .isoformat()
+        )
 
         invoice: Invoice = None
         if paid_at:
             invoice = PaidInvoice(
-                provider,
-                display_name,
-                invoice_no,
-                issuance_date,
-                amount,
-                deadline,
-                paid_at
+                provider, display_name, invoice_no, issuance_date, amount, deadline, paid_at
             )
         else:
-            invoice = Invoice(
-                provider,
-                display_name,
-                invoice_no,
-                issuance_date,
-                amount,
-                deadline
-            )
+            invoice = Invoice(provider, display_name, invoice_no, issuance_date, amount, deadline)
 
-        _LOGGER.info('Invoice created. %s', invoice)
+        _LOGGER.info("Invoice created. %s", invoice)
 
         return invoice
 
     def _is_invoice_paid(self, row: PyQuery) -> Optional[bool]:
-        state_text = row.children('td:nth-child(8)').text()
+        state_text = row.children("td:nth-child(8)").text()
 
-        go_to_pay: bool = 'Tovább a fizetéshez' in state_text
+        go_to_pay: bool = "Tovább a fizetéshez" in state_text
         if go_to_pay:
             return False
 
-        paid: bool = 'Rendezett' in state_text
+        paid: bool = "Rendezett" in state_text
         if paid:
             return True
 
-        paid = 'Fizetve' in state_text
+        paid = "Fizetve" in state_text
         if paid:
             return True
 
-        not_paid: bool = 'Rendezetlen' in state_text
+        not_paid: bool = "Rendezetlen" in state_text
         if not_paid:
             return False
 
-        sent_to_mobile: bool = 'Mobiltelefonra küldve' in state_text
+        sent_to_mobile: bool = "Mobiltelefonra küldve" in state_text
         if sent_to_mobile:
             return False
 
-        sent_to_internet_banking: bool = 'Internetbanknak átadva' in state_text
+        sent_to_internet_banking: bool = "Internetbanknak átadva" in state_text
         if sent_to_internet_banking:
             return False
 
-        collection: bool = 'Csoportos beszedés' in state_text or 'Beszedés alatt' in state_text
+        collection: bool = "Csoportos beszedés" in state_text or "Beszedés alatt" in state_text
         if collection:
             if self._encashment_reported_as_paid_after_deadline:
-                deadline = datetime.strptime(row.children(
-                    'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date()
+                deadline = (
+                    datetime.strptime(row.children("td:nth-child(6)").text(), DATE_FORMAT)
+                    .replace(tzinfo=None)
+                    .date()
+                )
                 return deadline < datetime.now().date()
             else:
                 return False
@@ -680,9 +712,13 @@ class DijnetController:
                 registry = yaml.safe_load(file)
 
             if isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], datetime):
-                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[ATTR_REGISTRY_NEXT_QUERY_DATE].date().isoformat()
+                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = (
+                    registry[ATTR_REGISTRY_NEXT_QUERY_DATE].date().isoformat()
+                )
             elif isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], date):
-                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[ATTR_REGISTRY_NEXT_QUERY_DATE].isoformat()
+                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[
+                    ATTR_REGISTRY_NEXT_QUERY_DATE
+                ].isoformat()
 
             paid_invoices = []
             _LOGGER.debug('Loading invoices from "%s"', paid_invoices_filename)
@@ -690,28 +726,21 @@ class DijnetController:
                 data = yaml.safe_load(file)
                 for paid_invoice_dict in data:
                     try:
-                        paid_invoices.append(
-                            PaidInvoice.from_dictionary(paid_invoice_dict)
-                        )
+                        paid_invoices.append(PaidInvoice.from_dictionary(paid_invoice_dict))
                     # pylint: disable=broad-except
                     except Exception as exception:
-                        _LOGGER.warning(
-                            'Invalid paid invoice data: %s',
-                            exception
-                        )
+                        _LOGGER.warning("Invalid paid invoice data: %s", exception)
         except FileNotFoundError:
             _LOGGER.debug('"%s" or "%s" not found.', paid_invoices_filename, registry_filename)
             paid_invoices = []
-            registry = {
-                ATTR_REGISTRY_NEXT_QUERY_DATE: MIN_DATE
-            }
+            registry = {ATTR_REGISTRY_NEXT_QUERY_DATE: MIN_DATE}
 
         self._paid_invoices = paid_invoices
         self._registry = registry
 
 
 def set_controller(hass: HomeAssistantType, user_name: str, controller: DijnetController) -> None:
-    '''
+    """
     Sets the controller instance for the specified username in Home Assistant data container.
 
     Parameters
@@ -722,12 +751,12 @@ def set_controller(hass: HomeAssistantType, user_name: str, controller: DijnetCo
         The registered username.
     controller: DijnetController
         The controller instance to set.
-    '''
+    """
     hass.data[DOMAIN][DATA_CONTROLLER][user_name] = controller
 
 
 def get_controller(hass: HomeAssistantType, user_name: str) -> DijnetController:
-    '''
+    """
     Gets the controller instance for the specified username from Home Assistant data container.
 
     Parameters
@@ -741,12 +770,12 @@ def get_controller(hass: HomeAssistantType, user_name: str) -> DijnetController:
     -------
     DijnetController
         The controller associated to the specified username.
-    '''
+    """
     return hass.data[DOMAIN][DATA_CONTROLLER].get(user_name)
 
 
 def is_controller_exists(hass: HomeAssistantType, user_name: str) -> bool:
-    '''
+    """
     Gets the value indicates whether a controller associated to the specified
     username in Home Assistant data container.
 
@@ -762,7 +791,7 @@ def is_controller_exists(hass: HomeAssistantType, user_name: str) -> bool:
     bool
         The value indicates whether a controller associated to the specified
         username in Home Assistant data container.
-    '''
+    """
     return user_name in hass.data[DOMAIN][DATA_CONTROLLER]
 
 
