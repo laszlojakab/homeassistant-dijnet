@@ -80,8 +80,6 @@ lint.ignore = [
     "TD003",  # Missing issue link on the line following this TODO
     "ANN002",  # Missing type annotation for `*args`
     "ANN003",  # Missing type annotation for `**kwargs`
-    "ANN101",  # Missing type annotation for `self` in method
-    "ANN102",  # Missing type annotation for `cls` in classmethod
     "ANN204",  # Missing return type annotation for special method `__init__`
     "ISC001",  # single-line-implicit-string-concatenation
 ]

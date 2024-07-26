@@ -1,6 +1,4 @@
-"""
-Constants for Dijnet integration.
-"""
+"""Constants for Dijnet integration."""
 
 DOMAIN = "dijnet"
 

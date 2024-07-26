@@ -1,10 +1,7 @@
-# pylint: disable=bad-continuation
-"""
-The configuration flow module for Dijnet integration.
-"""
+"""The configuration flow module for Dijnet integration."""
 
 import logging
-from typing import Any, Dict
+from typing import Any, Self
 
 import voluptuous as vol
 from homeassistant.config_entries import HANDLERS, ConfigEntry, ConfigFlow, OptionsFlow
@@ -21,30 +18,26 @@ _LOGGER = logging.getLogger(__name__)
 class DijnetOptionsFlowHandler(OptionsFlow):
     """Handle Dijnet options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self: Self, config_entry: ConfigEntry) -> None:
         """
         Initialize a new instance of DijnetOptionsFlowHandler class.
 
-        Parameters
-        ----------
-        config_entry: homeassistant.config_entries.ConfigEntry
+        Args:
+          config_entry:
             The config entry of the integration.
 
-        Returns
-        -------
-        None
         """
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input: Dict[str, Any] = None) -> FlowResult:
+    async def async_step_init(self: Self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """
         Handles Dijnet configuration init step.
 
-        Parameters
-        ----------
-        user_input: Dict[str, Any]
+        Args:
+          user_input:
             The dictionary contains the settings entered by the user
             on the configuration screen.
+
         """
         data_schema = vol.Schema(
             {
@@ -81,9 +74,7 @@ class DijnetOptionsFlowHandler(OptionsFlow):
 
 @HANDLERS.register(DOMAIN)
 class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
-    """
-    Configuration flow handler for Dijnet integration.
-    """
+    """Configuration flow handler for Dijnet integration."""
 
     VERSION = 2
 
@@ -93,21 +84,27 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         Gets the options flow handler for the integration.
 
-        Parameters
-        ----------
-        config_entry: homeassistant.config_entries.ConfigEntry
+        Args:
+          config_entry:
             The config entry of the integration.
 
-        Returns
-        -------
-        DijnetOptionsFlowHandler
-            The options flow handler for the integration.
+        Returns:
+          The options flow handler for the integration.
+
         """
         return DijnetOptionsFlowHandler(config_entry)
 
-    async def async_step_user(self, user_input: Dict[str, Any]) -> FlowResult:
+    async def async_step_user(self: Self, user_input: dict[str, Any]) -> FlowResult:
         """
         Handles the step when integration added from the UI.
+
+        Args:
+          user_input:
+            The dictionary contains the settings entered by the user
+            on the configuration screen.
+
+        Returns:
+          The result of the flow step.
         """
         data_schema = vol.Schema(
             {
@@ -148,10 +145,8 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
         )
 
-    async def async_step_import(self, import_config: Dict[str, Any]) -> FlowResult:
-        """
-        Handles the yaml configuration import step.
-        """
+    async def async_step_import(self: Self, import_config: dict[str, Any]) -> FlowResult:
+        """Handles the yaml configuration import step."""
         _LOGGER.debug("Importing Dijnet config from yaml.")
 
         await self.async_set_unique_id(import_config[CONF_USERNAME])

@@ -8,5 +8,5 @@
   "config_flow": true,
   "version": "0.6.4",
   "codeowners": ["@laszlojakab"],
-  "requirements": ["PyQuery==1.4.3"]
+  "requirements": ["PyQuery==1.4.3", "anyio==4.8.*"]
 }
