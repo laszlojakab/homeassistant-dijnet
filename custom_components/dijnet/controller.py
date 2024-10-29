@@ -415,7 +415,7 @@ class DijnetController:
 
             invoice_providers_response = await session.get_registered_providers_page()
 
-            invoice_providers_response_pquery = pq(invoice_providers_response)
+            invoice_providers_response_pquery = pq(invoice_providers_response.decode("iso-8859-2").encode('utf-8'))
             for row in invoice_providers_response_pquery.find(".table > tbody > tr").items():
                 issuer_name = row.children("td:nth-child(1)").text()
                 issuer_id = row.children("td:nth-child(2)").text()
@@ -454,13 +454,13 @@ class DijnetController:
             await session.get_main_page()
 
             search_page = await session.get_invoice_search_page()
-            search_page_pyquery = pq(search_page)            
+            search_page_pyquery = pq(search_page.decode("iso-8859-2").encode('utf-8'))            
             
             vfw_token = next(search_page_pyquery.find('form[action=szamla_search_submit] input[name=vfw_token]').items()).val()
 
             search_result = await session.post_search_invoice('', '', vfw_token, from_date, to_date)
 
-            invoices_pyquery = pq(search_result)
+            invoices_pyquery = pq(search_result.decode("iso-8859-2").encode('utf-8'))
             possible_new_paid_invoices: List[PaidInvoice] = []
             possible_new_unpaid_invoices: List[Invoice] = []
             index = 0
@@ -474,7 +474,7 @@ class DijnetController:
                 elif self._is_invoice_paid(row):
                     await session.get_invoice_page(index)
                     invoice_history_page = await session.get_invoice_history_page()
-                    invoice_history_page_response_pyquery = pq(invoice_history_page)
+                    invoice_history_page_response_pyquery = pq(invoice_history_page.decode("iso-8859-2").encode('utf-8'))
                     for history_row in invoice_history_page_response_pyquery.find('.table tr').items():
                         if history_row.children('td:nth-child(4)').text() == '**Sikeres fizetés**':
                             paid_at = datetime.strptime(
