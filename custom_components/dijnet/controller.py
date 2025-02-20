@@ -602,7 +602,7 @@ class DijnetController:
         issuance_date = datetime.strptime(row.children(
             'td:nth-child(4)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
         amount = float(
-            re.sub(r'[^0-9\-]+', '', row.children('td:nth-child(5)').text()))
+            re.sub(r'[^0-9\-]+', '', row.children('td:nth-child(7)').text()))
         deadline = datetime.strptime(row.children(
             'td:nth-child(6)').text(), DATE_FORMAT).replace(tzinfo=None).date().isoformat()
 
