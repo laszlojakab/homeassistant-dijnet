@@ -556,11 +556,10 @@ class DijnetController:
                     get_paid_invoices_filename(self._username), "a"
                 ) as file:
                     await file.write("\n")
-                    yaml.dump(
+                    await file.write(yaml.dump(
                         [x.to_dictionary() for x in new_paid_invoices],
-                        file,
                         default_flow_style=False,
-                    )
+                    ))
 
             next_query_date = (
                 (datetime.fromisoformat(to_date) - timedelta(days=31)).date().isoformat()
@@ -572,7 +571,7 @@ class DijnetController:
             registry = {ATTR_REGISTRY_NEXT_QUERY_DATE: next_query_date}
 
             async with await anyio.open_file(get_registry_filename(self._username), "w") as file:
-                yaml.dump(registry, file, default_flow_style=False)
+                await file.write(yaml.dump(registry, default_flow_style=False))
 
             self._registry = registry
             self._unpaid_invoices = unpaid_invoices
