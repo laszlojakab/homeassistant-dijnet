@@ -555,7 +555,7 @@ class DijnetController:
                 async with await anyio.open_file(
                     get_paid_invoices_filename(self._username), "a"
                 ) as file:
-                    file.write("\n")
+                    await file.write("\n")
                     yaml.dump(
                         [x.to_dictionary() for x in new_paid_invoices],
                         file,
