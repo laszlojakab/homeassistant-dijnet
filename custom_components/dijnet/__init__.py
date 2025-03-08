@@ -1,4 +1,4 @@
-'''Dijnet component.'''
+"""Dijnet component."""
 
 import logging
 
@@ -6,53 +6,49 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
-from .const import (CONF_DOWNLOAD_DIR,
-                    CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE,
-                    DATA_CONTROLLER, DOMAIN)
+from .const import (
+    CONF_DOWNLOAD_DIR,
+    CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE,
+    DATA_CONTROLLER,
+    DOMAIN,
+)
 from .controller import DijnetController, is_controller_exists, set_controller
 
 _LOGGER = logging.getLogger(__name__)
 
-# pylint: disable=unused-argument
 
+async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:  # noqa: ARG001
+    """
+    Sets up the Dijnet component.
 
-async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
-    '''
-    Set up the Dijnet component.
-
-    Parameters
-    ----------
-    hass: homeassistant.helpers.typing.HomeAssistantType
+    Args:
+      hass:
         The Home Assistant instance.
-    config: homeassistant.helpers.typing.ConfigType
+      config:
         The configuration.
 
-    Returns
-    -------
-    bool
-        The value indicates whether the setup succeeded.
-    '''
+    Returns:
+      The value indicates whether the setup succeeded.
+
+    """
     hass.data[DOMAIN] = {DATA_CONTROLLER: {}}
     return True
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry) -> bool:
-    '''
-    Initialize the sensors based on the config entry.
+    """
+    Initializes the sensors based on the config entry.
 
-    Parameters
-    ----------
-    hass: homeassistant.helpers.typing.HomeAssistantType
+    Args:
+      hass:
         The Home Assistant instance.
-    config_entry: homeassistant.config_entries.ConfigEntry
+      config_entry:
         The config entry which contains information gathered by the config flow.
 
-    Returns
-    -------
-    bool
-        The value indicates whether the setup succeeded.
-    '''
+    Returns:
+      The value indicates whether the setup succeeded.
 
+    """
     if not is_controller_exists(hass, config_entry.data[CONF_USERNAME]):
         set_controller(
             hass,
@@ -61,19 +57,28 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry) 
                 config_entry.data[CONF_USERNAME],
                 config_entry.data[CONF_PASSWORD],
                 config_entry.data[CONF_DOWNLOAD_DIR],
-                config_entry.data[CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE]
-            )
+                config_entry.data[CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE],
+            ),
         )
 
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(config_entry, 'sensor')
-    )
+    hass.async_create_task(hass.config_entries.async_forward_entry_setup(config_entry, "sensor"))
 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
-    """Migrate old entry."""
+async def async_migrate_entry(hass: HomeAssistantType, config_entry: ConfigEntry) -> bool:
+    """
+    Migrates old entry.
+
+    Args:
+      hass:
+        The Home Assistant instance.
+      config_entry:
+        The config entry to migrate.
+
+    Returns:
+      The value indicates whether the migration succeeded.
+    """
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1:
