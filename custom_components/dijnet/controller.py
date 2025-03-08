@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import date, datetime, timedelta
 from os import makedirs, path, remove
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import anyio
 import pytz
@@ -100,9 +100,9 @@ class Invoice:
         provider: str,
         display_name: str,
         invoice_no: str,
-        issuance_date: datetime,
+        issuance_date: date,
         amount: int,
-        deadline: datetime,
+        deadline: date,
     ):
         """
         Initialize a new instance of Invoice class.
@@ -144,7 +144,7 @@ class Invoice:
         return self._invoice_no
 
     @property
-    def issuance_date(self: Self) -> datetime:
+    def issuance_date(self: Self) -> date:
         """Gets the issuance date."""
         return self._issuance_date
 
@@ -154,7 +154,7 @@ class Invoice:
         return self._amount
 
     @property
-    def deadline(self: Self) -> datetime:
+    def deadline(self: Self) -> date:
         """Gets the deadline."""
         return self._deadline
 
@@ -195,10 +195,10 @@ class PaidInvoice(Invoice):
         provider: str,
         display_name: str,
         invoice_no: str,
-        issuance_date: datetime,
+        issuance_date: date,
         amount: int,
-        deadline: datetime,
-        paid_at: datetime,
+        deadline: date,
+        paid_at: date,
     ) -> None:
         """
         Initialize a new instance of Invoice class.
@@ -239,18 +239,20 @@ class PaidInvoice(Invoice):
         Returns:
             The converted paid invoice.
         """
+
+        def _to_date(val: str | date) -> date:
+            if isinstance(val, str):
+                return date.fromisoformat(val)
+            return val
+
         return PaidInvoice(
             dictionary[ATTR_PROVIDER],
             dictionary[ATTR_DISPLAY_NAME],
             dictionary[ATTR_INVOICE_NO],
-            dictionary[ATTR_ISSUANCE_DATE].date().isoformat()
-            if isinstance(dictionary[ATTR_ISSUANCE_DATE], datetime)
-            else dictionary[ATTR_ISSUANCE_DATE],
-            dictionary[ATTR_DEADLINE].date().isoformat()
-            if isinstance(dictionary[ATTR_DEADLINE], datetime)
-            else dictionary[ATTR_DEADLINE],
+            _to_date(dictionary[ATTR_ISSUANCE_DATE]),
             dictionary[ATTR_AMOUNT],
-            dictionary[ATTR_PAID_AT],
+            _to_date(dictionary[ATTR_DEADLINE]),
+            _to_date(dictionary[ATTR_PAID_AT]),
         )
 
     def to_dictionary(self: Self) -> dict[str, Any]:
@@ -410,8 +412,12 @@ class DijnetController:
             if not await session.post_login(self._username, self._password):
                 return
 
-            from_date = self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE]
-            to_date = datetime.now(TZ).date().isoformat()
+            from_date = (
+                date.fromisoformat(self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE])
+                if isinstance(self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE], str)
+                else cast(date, self._registry[ATTR_REGISTRY_NEXT_QUERY_DATE])
+            )
+            to_date = datetime.now(TZ).date()
 
             await session.get_main_page()
 
@@ -430,7 +436,9 @@ class DijnetController:
                 ).items()
             ).val()
 
-            search_result = await session.post_search_invoice("", "", vfw_token, from_date, to_date)
+            search_result = await session.post_search_invoice(
+                "", "", vfw_token, from_date.isoformat(), to_date.isoformat()
+            )
 
             invoices_pyquery = PyQuery(search_result.decode("iso-8859-2").encode("utf-8"))
             possible_new_paid_invoices: list[PaidInvoice] = []
@@ -462,7 +470,6 @@ class DijnetController:
                                 )
                                 .replace(tzinfo=TZ)
                                 .date()
-                                .isoformat()
                             )
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
@@ -474,7 +481,6 @@ class DijnetController:
                                 )
                                 .replace(tzinfo=TZ)
                                 .date()
-                                .isoformat()
                             )
                             invoice = self._create_invoice_from_row(row, paid_at)
                             possible_new_paid_invoices.append(invoice)
@@ -503,7 +509,7 @@ class DijnetController:
                         name = href.split("?")[0][:-4]
                         filename = (
                             slugify(
-                                f"{datetime.fromisoformat(invoice.issuance_date).strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
+                                f"{invoice.issuance_date.strftime('%Y%m%d')}_{invoice.invoice_no}_{name}"
                             )
                             + f".{extension}"
                         )
@@ -563,9 +569,7 @@ class DijnetController:
                         )
                     )
 
-            next_query_date = (
-                (datetime.fromisoformat(to_date) - timedelta(days=31)).date().isoformat()
-            )
+            next_query_date = to_date - timedelta(days=31)
 
             for unpaid_invoice in unpaid_invoices:
                 next_query_date = min(next_query_date, unpaid_invoice.issuance_date)
@@ -579,9 +583,7 @@ class DijnetController:
             self._unpaid_invoices = unpaid_invoices
             self._paid_invoices = paid_invoices
 
-    def _create_invoice_from_row(
-        self: Self, row: PyQuery, paid_at: datetime | None = None
-    ) -> Invoice:
+    def _create_invoice_from_row(self: Self, row: PyQuery, paid_at: date | None = None) -> Invoice:
         provider = row.children("td:nth-child(1)").text()
         display_name = row.children("td:nth-child(2)").text()
         invoice_no = row.children("td:nth-child(3)").text()
@@ -589,14 +591,12 @@ class DijnetController:
             datetime.strptime(row.children("td:nth-child(4)").text(), DATE_FORMAT)
             .replace(tzinfo=TZ)
             .date()
-            .isoformat()
         )
         amount = float(re.sub(r"[^0-9\-]+", "", row.children("td:nth-child(7)").text()))
         deadline = (
             datetime.strptime(row.children("td:nth-child(6)").text(), DATE_FORMAT)
             .replace(tzinfo=TZ)
             .date()
-            .isoformat()
         )
 
         invoice: Invoice = None
@@ -650,16 +650,7 @@ class DijnetController:
             async with await anyio.open_file(registry_filename) as file:
                 registry_file_content = await file.read()
                 registry = yaml.safe_load(registry_file_content)
-
-            if isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], datetime):
-                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = (
-                    registry[ATTR_REGISTRY_NEXT_QUERY_DATE].date().isoformat()
-                )
-            elif isinstance(registry[ATTR_REGISTRY_NEXT_QUERY_DATE], date):
-                registry[ATTR_REGISTRY_NEXT_QUERY_DATE] = registry[
-                    ATTR_REGISTRY_NEXT_QUERY_DATE
-                ].isoformat()
-
+        
             paid_invoices = []
             _LOGGER.debug('Loading invoices from "%s"', paid_invoices_filename)
             async with await anyio.open_file(paid_invoices_filename) as file:
