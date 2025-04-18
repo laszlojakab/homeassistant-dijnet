@@ -556,10 +556,12 @@ class DijnetController:
                     get_paid_invoices_filename(self._username), "a"
                 ) as file:
                     await file.write("\n")
-                    await file.write(yaml.dump(
-                        [x.to_dictionary() for x in new_paid_invoices],
-                        default_flow_style=False,
-                    ))
+                    await file.write(
+                        yaml.dump(
+                            [x.to_dictionary() for x in new_paid_invoices],
+                            default_flow_style=False,
+                        )
+                    )
 
             next_query_date = (
                 (datetime.fromisoformat(to_date) - timedelta(days=31)).date().isoformat()
