@@ -19,7 +19,7 @@ from .const import DATA_CONTROLLER, DOMAIN
 from .dijnet_session import DijnetSession
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.typing import HomeAssistantType
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -556,10 +556,12 @@ class DijnetController:
                     get_paid_invoices_filename(self._username), "a"
                 ) as file:
                     await file.write("\n")
-                    await file.write(yaml.dump(
-                        [x.to_dictionary() for x in new_paid_invoices],
-                        default_flow_style=False,
-                    ))
+                    await file.write(
+                        yaml.dump(
+                            [x.to_dictionary() for x in new_paid_invoices],
+                            default_flow_style=False,
+                        )
+                    )
 
             next_query_date = (
                 (datetime.fromisoformat(to_date) - timedelta(days=31)).date().isoformat()
@@ -677,7 +679,7 @@ class DijnetController:
         self._registry = registry
 
 
-def set_controller(hass: HomeAssistantType, user_name: str, controller: DijnetController) -> None:
+def set_controller(hass: HomeAssistant, user_name: str, controller: DijnetController) -> None:
     """
     Sets the controller instance for the specified username in Home Assistant data container.
 
@@ -692,7 +694,7 @@ def set_controller(hass: HomeAssistantType, user_name: str, controller: DijnetCo
     hass.data[DOMAIN][DATA_CONTROLLER][user_name] = controller
 
 
-def get_controller(hass: HomeAssistantType, user_name: str) -> DijnetController:
+def get_controller(hass: HomeAssistant, user_name: str) -> DijnetController:
     """
     Gets the controller instance for the specified username from Home Assistant data container.
 
@@ -708,7 +710,7 @@ def get_controller(hass: HomeAssistantType, user_name: str) -> DijnetController:
     return hass.data[DOMAIN][DATA_CONTROLLER].get(user_name)
 
 
-def is_controller_exists(hass: HomeAssistantType, user_name: str) -> bool:
+def is_controller_exists(hass: HomeAssistant, user_name: str) -> bool:
     """
     Gets the value indicates whether a controller associated to the specified
     username in Home Assistant data container.
