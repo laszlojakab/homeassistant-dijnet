@@ -250,10 +250,10 @@ class PaidInvoice(Invoice):
             dictionary[ATTR_ISSUANCE_DATE].date().isoformat()
             if isinstance(dictionary[ATTR_ISSUANCE_DATE], datetime)
             else dictionary[ATTR_ISSUANCE_DATE],
+            dictionary[ATTR_AMOUNT],
             dictionary[ATTR_DEADLINE].date().isoformat()
             if isinstance(dictionary[ATTR_DEADLINE], datetime)
             else dictionary[ATTR_DEADLINE],
-            dictionary[ATTR_AMOUNT],
             dictionary[ATTR_PAID_AT],
         )
 
