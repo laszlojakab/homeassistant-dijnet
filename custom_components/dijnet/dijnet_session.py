@@ -219,7 +219,7 @@ class DijnetSession:
             "https://www.dijnet.hu/ekonto/login/login_check_ajax",
             data={"username": username, "password": password},
         ) as response:
-            json = await response.json(content_type="text/plain")
+            json = await response.json(content_type=none)
             if not json["success"]:
                 _LOGGER.warning(json)
             return json["success"]
