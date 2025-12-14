@@ -41,3 +41,4 @@ logger:
   logs:
     custom_components.dijnet: debug
 ```
+V02.
