@@ -27,7 +27,8 @@ class DijnetOptionsFlowHandler(OptionsFlow):
             The config entry of the integration.
 
         """
-        self.config_entry = config_entry
+        # Don't assign to self.config_entry (read-only on base class).
+        self._config_entry = config_entry
 
     async def async_step_init(self: Self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """
@@ -41,13 +42,13 @@ class DijnetOptionsFlowHandler(OptionsFlow):
         """
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_PASSWORD, default=self.config_entry.data[CONF_PASSWORD]): str,
+                vol.Required(CONF_PASSWORD, default=self._config_entry.data[CONF_PASSWORD]): str,
                 vol.Optional(
-                    CONF_DOWNLOAD_DIR, default=self.config_entry.data.get(CONF_DOWNLOAD_DIR)
+                    CONF_DOWNLOAD_DIR, default=self._config_entry.data.get(CONF_DOWNLOAD_DIR)
                 ): str,
                 vol.Required(
                     CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE,
-                    default=self.config_entry.data[CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE],
+                    default=self._config_entry.data[CONF_ENCASHMENT_REPORTED_AS_PAID_AFTER_DEADLINE],
                 ): bool,
             }
         )
@@ -55,7 +56,7 @@ class DijnetOptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             async with DijnetSession() as session:
                 if not await session.post_login(
-                    self.config_entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
+                    self._config_entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
                 ):
                     return self.async_show_form(
                         step_id="init",
@@ -64,7 +65,7 @@ class DijnetOptionsFlowHandler(OptionsFlow):
                     )
 
             self.hass.config_entries.async_update_entry(
-                self.config_entry, data=self.config_entry.data | user_input
+                self._config_entry, data=self._config_entry.data | user_input
             )
 
             return self.async_abort(reason="reconfigure_successful")
@@ -80,7 +81,7 @@ class DijnetConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigFlow) -> DijnetOptionsFlowHandler:
+    def async_get_options_flow(config_entry: ConfigEntry) -> DijnetOptionsFlowHandler:
         """
         Gets the options flow handler for the integration.
 

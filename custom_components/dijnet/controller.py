@@ -166,6 +166,10 @@ class Invoice:
             and obj.invoice_no == self.invoice_no
         )
 
+    def __hash__(self: Self) -> int:
+        """Implements hash so Invoice is hashable (based on provider and invoice_no)."""
+        return hash((self.provider, self.invoice_no))
+
     def to_dictionary(self: Self) -> dict[str, Any]:
         """
         Converts the paid invoice to a dictionary.
@@ -246,10 +250,10 @@ class PaidInvoice(Invoice):
             dictionary[ATTR_ISSUANCE_DATE].date().isoformat()
             if isinstance(dictionary[ATTR_ISSUANCE_DATE], datetime)
             else dictionary[ATTR_ISSUANCE_DATE],
+            dictionary[ATTR_AMOUNT],
             dictionary[ATTR_DEADLINE].date().isoformat()
             if isinstance(dictionary[ATTR_DEADLINE], datetime)
             else dictionary[ATTR_DEADLINE],
-            dictionary[ATTR_AMOUNT],
             dictionary[ATTR_PAID_AT],
         )
 
