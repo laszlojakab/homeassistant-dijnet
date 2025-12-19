@@ -372,9 +372,12 @@ class DijnetController:
 
             search_page = await session.get_invoice_search_page()
 
-            providers_json = re.search(
-                r"var ropts = (.*);", search_page.decode("iso-8859-2")
-            ).groups(1)[0]
+            match = re.search(r"var ropts = (.*);", search_page.decode("iso-8859-2"))
+            if match:
+                providers_json = match.group(1)
+            else:
+                _LOGGER.error("Failed to extract providers JSON from search page")
+                return
 
             raw_providers: list[Any] = json.loads(providers_json)
 
